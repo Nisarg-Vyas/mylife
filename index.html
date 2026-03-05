@@ -7,32 +7,31 @@
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
 <!-- ════════════════════════════════════════════════
-     🔧 FIREBASE CONFIG — REPLACE THESE VALUES
-     Follow the hosting guide to get these values.
-     Until then, the app works fully in local mode.
+     🔧 FIREBASE CONFIG — put YOUR values here
 ════════════════════════════════════════════════ -->
 <script>
-   const firebaseConfig = {
+  // ✅ Your Firebase config (single source of truth)
+  const FIREBASE_CONFIG = {
     apiKey: "AIzaSyB5v4rXWR7J6yQV1mbrz4by3uQkK0wWcEg",
     authDomain: "mylife-tracker-eaefd.firebaseapp.com",
     projectId: "mylife-tracker-eaefd",
     storageBucket: "mylife-tracker-eaefd.firebasestorage.app",
     messagingSenderId: "861377087726",
-    appId: "1:861377087726:web:8473d40f8a2e6b86c74bff",
-    measurementId: "G-FDV5ERN6SZ"
+    appId: "1:861377087726:web:8473d40f8a2e6b86c74bff"
   };
 
-
-  // Immediately hide loading screen — don't wait for Firebase
-  // This prevents the endless buffering when Firebase isn't configured
+  // Hard safety net: if app hasn't launched in 6s, force offline mode
+  // so it never buffers forever, even if Firebase network call fails.
   window.addEventListener('DOMContentLoaded', () => {
-    const isConfigured = FIREBASE_CONFIG.apiKey !== "REPLACE_WITH_YOUR_API_KEY";
-    if (!isConfigured) {
-      document.getElementById('loading-screen').style.display = 'none';
-      document.getElementById('auth-screen').style.display = 'flex';
-      const notice = document.getElementById('config-notice');
-      if (notice) notice.classList.add('show');
-    }
+    setTimeout(() => {
+      const ls = document.getElementById('loading-screen');
+      const appEl = document.getElementById('app');
+      if (ls && ls.style.display !== 'none' && appEl && !appEl.classList.contains('visible')) {
+        console.warn('MyLife: startup timeout — switching to offline mode');
+        ls.style.display = 'none';
+        document.getElementById('auth-screen').style.display = 'flex';
+      }
+    }, 6000);
   });
 </script>
 
@@ -996,7 +995,7 @@ label { font-size: 0.83rem; color: var(--text2); display: block; margin-bottom: 
 
 // Check if Firebase is configured BEFORE importing SDK
 // This prevents hanging when apiKey is still the placeholder
-const isFirebaseConfigured = FIREBASE_CONFIG.apiKey !== "REPLACE_WITH_YOUR_API_KEY";
+const isFirebaseConfigured = !!(FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.startsWith('REPLACE'));
 
 let initializeApp, getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
     signOut, onAuthStateChanged, updateProfile, GoogleAuthProvider, signInWithPopup,
