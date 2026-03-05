@@ -488,6 +488,24 @@ label { font-size: 0.83rem; color: var(--text2); display: block; margin-bottom: 
 
 <!-- ═══════════════════════ AUTH SCREEN ═══════════════════════ -->
 <div id="auth-screen" style="display:none">
+  <!-- Verification sent banner — shown after signup -->
+  <div id="verify-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:2000;
+    background:linear-gradient(135deg,#0e1420,#151d2e);border-bottom:1px solid #36d399;
+    padding:2rem 1.5rem;text-align:center">
+    <div style="font-size:2.5rem;margin-bottom:0.75rem">📧</div>
+    <div style="font-family:'Instrument Serif',serif;font-size:1.5rem;color:#e8edf5;margin-bottom:0.5rem">
+      Check your inbox!
+    </div>
+    <div style="color:#8b9ab5;font-size:0.9rem;margin-bottom:0.25rem">
+      We sent a verification link to <strong id="verify-email-display" style="color:#36d399"></strong>
+    </div>
+    <div style="color:#4a5a78;font-size:0.82rem;margin-bottom:1.25rem">
+      Click the link in the email, then come back here and sign in.
+    </div>
+    <button onclick="closeVerifyBanner()" class="btn btn-secondary" style="font-size:0.85rem">
+      ← Back to Sign In
+    </button>
+  </div>
   <div class="auth-card">
     <div class="auth-logo">✦ MyLife</div>
     <div class="auth-tagline">Your college & life tracker, anywhere</div>
@@ -510,6 +528,7 @@ label { font-size: 0.83rem; color: var(--text2); display: block; margin-bottom: 
       </div>
       <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center" id="login-btn">Sign In</button>
       <button type="button" class="btn btn-secondary" style="width:100%;justify-content:center;font-size:0.8rem" onclick="handleForgotPassword()">Forgot password?</button>
+      <button type="button" id="resend-verify-btn" style="display:none;width:100%;justify-content:center;font-size:0.8rem;margin-top:0.25rem" class="btn btn-secondary">📧 Resend verification email</button>
     </form>
 
     <!-- Signup form -->
@@ -999,7 +1018,7 @@ const isFirebaseConfigured = !!(FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKe
 
 let initializeApp, getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
     signOut, onAuthStateChanged, updateProfile, GoogleAuthProvider, signInWithPopup,
-    sendPasswordResetEmail, getFirestore, doc, getDoc, setDoc;
+    sendPasswordResetEmail, sendEmailVerification, getFirestore, doc, getDoc, setDoc;
 
 let app, auth, db;
 let currentUser = null;
@@ -1022,6 +1041,7 @@ if (isFirebaseConfigured) {
     GoogleAuthProvider = fbAuth.GoogleAuthProvider;
     signInWithPopup = fbAuth.signInWithPopup;
     sendPasswordResetEmail = fbAuth.sendPasswordResetEmail;
+    sendEmailVerification = fbAuth.sendEmailVerification;
     getFirestore = fbStore.getFirestore;
     doc = fbStore.doc;
     getDoc = fbStore.getDoc;
@@ -1101,7 +1121,26 @@ window.handleLogin = async (e) => {
   btn.innerHTML = '<div class="spinner"></div>';
   btn.disabled = true;
   try {
-    await signInWithEmailAndPassword(auth, email, password);
+    const cred = await signInWithEmailAndPassword(auth, email, password);
+    // Block unverified email accounts
+    if (!cred.user.emailVerified) {
+      await signOut(auth);
+      showAuthError('login-error', 'Please verify your email first. Check your inbox for the verification link.');
+      // Show resend button
+      document.getElementById('resend-verify-btn').style.display = 'block';
+      document.getElementById('resend-verify-btn').onclick = async () => {
+        // Re-sign in temporarily to send the email, then sign out again
+        try {
+          const tempCred = await signInWithEmailAndPassword(auth, email, password);
+          await sendEmailVerification(tempCred.user);
+          await signOut(auth);
+          showAuthError('login-error', 'Verification email resent! Check your inbox.');
+        } catch(e) { showAuthError('login-error', 'Could not resend. Try again in a minute.'); }
+      };
+      btn.innerHTML = 'Sign In'; btn.disabled = false;
+      return;
+    }
+    document.getElementById('resend-verify-btn').style.display = 'none';
   } catch(err) {
     showAuthError('login-error', friendlyAuthError(err.code));
     btn.innerHTML = 'Sign In'; btn.disabled = false;
@@ -1119,6 +1158,13 @@ window.handleSignup = async (e) => {
   try {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(cred.user, { displayName: name });
+    // Send verification email
+    await sendEmailVerification(cred.user);
+    // Sign them out immediately — they must verify before accessing the app
+    await signOut(auth);
+    // Show a friendly message on the auth screen
+    showVerificationMessage(email);
+    btn.innerHTML = 'Create Account'; btn.disabled = false;
   } catch(err) {
     showAuthError('signup-error', friendlyAuthError(err.code));
     btn.innerHTML = 'Create Account'; btn.disabled = false;
@@ -1931,6 +1977,16 @@ function fmtDateLong(ds) {
 }
 window.fmtDate = fmtDate;
 window.fmtDateLong = fmtDateLong;
+
+function showVerificationMessage(email) {
+  document.getElementById('verify-email-display').textContent = email;
+  document.getElementById('verify-banner').style.display = 'block';
+  // Switch to login tab so they can sign in after verifying
+  switchAuthTab('login');
+}
+window.closeVerifyBanner = () => {
+  document.getElementById('verify-banner').style.display = 'none';
+};
 
 function showAuthError(id, msg) {
   const el = document.getElementById(id);
