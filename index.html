@@ -1073,27 +1073,35 @@ window.appData = {
 
 async function saveData(key, value) {
   window.appData[key] = value;
+  // Use uid-namespaced keys so different users never share local data
+  const uid = currentUser ? currentUser.uid : 'offline';
+  const lsKey = 'mylife_' + uid + '_' + key;
   if (firebaseReady && currentUser) {
     try {
       await setDoc(doc(db, 'users', currentUser.uid, 'data', key), { value: JSON.stringify(value) });
     } catch(e) { console.warn('Firestore save error:', e); }
   }
-  // Always backup to localStorage
-  try { localStorage.setItem('mylife_' + key, JSON.stringify(value)); } catch(e) {}
+  // Always backup to localStorage under uid-namespaced key
+  try { localStorage.setItem(lsKey, JSON.stringify(value)); } catch(e) {}
 }
 
 async function loadData(key) {
+  const uid = currentUser ? currentUser.uid : 'offline';
+  const lsKey = 'mylife_' + uid + '_' + key;
+  // Try Firestore first (cloud, most up to date)
   if (firebaseReady && currentUser) {
     try {
       const snap = await getDoc(doc(db, 'users', currentUser.uid, 'data', key));
       if (snap.exists()) {
+        // Also update local cache so offline fallback is fresh
+        try { localStorage.setItem(lsKey, snap.data().value); } catch(e) {}
         return JSON.parse(snap.data().value);
       }
     } catch(e) { console.warn('Firestore load error:', e); }
   }
-  // Fallback to localStorage
+  // Fallback to uid-namespaced localStorage (never bleeds into another user)
   try {
-    const raw = localStorage.getItem('mylife_' + key);
+    const raw = localStorage.getItem(lsKey);
     return raw ? JSON.parse(raw) : null;
   } catch(e) { return null; }
 }
@@ -1203,6 +1211,17 @@ window.handleForgotPassword = async () => {
 // ─── AUTH STATE ────────────────────────────────────────
 async function initApp(user) {
   currentUser = user;
+  // CRITICAL: always reset to blank slate before loading this user's data
+  // Without this, switching accounts would show the previous user's data
+  window.appData = {
+    semester: null,
+    customEvents: {},
+    trackingName: '',
+    trackingLog: {},
+    milestones: [],
+    diaryEntries: {},
+    btechInfo: null,
+  };
   await loadAllData();
   document.getElementById('loading-screen').style.display = 'none';
   document.getElementById('auth-screen').style.display = 'none';
