@@ -2,7 +2,7 @@
 
 > A beautiful, all-in-one personal tracker built for students. Track your semester, habits, daily diary, expenses, and your entire BTech journey — all in one place, accessible from any device.
 
-**🌐 Live Website:** [your-username.github.io/mylife](https://Nisarg-Vyas.github.io/mylife)
+**🌐 Live Website:** [Nisarg-Vyas.github.io/mylife](https://Nisarg-Vyas.github.io/mylife)
 
 ---
 
