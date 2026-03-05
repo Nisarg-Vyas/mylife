@@ -8,18 +8,32 @@
 
 <!-- ════════════════════════════════════════════════
      🔧 FIREBASE CONFIG — REPLACE THESE VALUES
-     Follow the hosting guide to get these values
+     Follow the hosting guide to get these values.
+     Until then, the app works fully in local mode.
 ════════════════════════════════════════════════ -->
 <script>
-  const firebaseConfig = {
-  apiKey: "AIzaSyB5v4rXWR7J6yQV1mbrz4by3uQkK0wWcEg",
-  authDomain: "mylife-tracker-eaefd.firebaseapp.com",
-  projectId: "mylife-tracker-eaefd",
-  storageBucket: "mylife-tracker-eaefd.firebasestorage.app",
-  messagingSenderId: "861377087726",
-  appId: "1:861377087726:web:8473d40f8a2e6b86c74bff",
-  measurementId: "G-FDV5ERN6SZ"
-};
+   const firebaseConfig = {
+    apiKey: "AIzaSyB5v4rXWR7J6yQV1mbrz4by3uQkK0wWcEg",
+    authDomain: "mylife-tracker-eaefd.firebaseapp.com",
+    projectId: "mylife-tracker-eaefd",
+    storageBucket: "mylife-tracker-eaefd.firebasestorage.app",
+    messagingSenderId: "861377087726",
+    appId: "1:861377087726:web:8473d40f8a2e6b86c74bff",
+    measurementId: "G-FDV5ERN6SZ"
+  };
+
+
+  // Immediately hide loading screen — don't wait for Firebase
+  // This prevents the endless buffering when Firebase isn't configured
+  window.addEventListener('DOMContentLoaded', () => {
+    const isConfigured = FIREBASE_CONFIG.apiKey !== "REPLACE_WITH_YOUR_API_KEY";
+    if (!isConfigured) {
+      document.getElementById('loading-screen').style.display = 'none';
+      document.getElementById('auth-screen').style.display = 'flex';
+      const notice = document.getElementById('config-notice');
+      if (notice) notice.classList.add('show');
+    }
+  });
 </script>
 
 <style>
@@ -977,14 +991,16 @@ label { font-size: 0.83rem; color: var(--text2); display: block; margin-bottom: 
 <!-- Toast -->
 <div id="toast"></div>
 
-<!-- ══════════════════ FIREBASE SDK ══════════════════ -->
+<!-- ══════════════════ APP SCRIPT ══════════════════ -->
 <script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
-// Check if Firebase is configured
+// Check if Firebase is configured BEFORE importing SDK
+// This prevents hanging when apiKey is still the placeholder
 const isFirebaseConfigured = FIREBASE_CONFIG.apiKey !== "REPLACE_WITH_YOUR_API_KEY";
+
+let initializeApp, getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
+    signOut, onAuthStateChanged, updateProfile, GoogleAuthProvider, signInWithPopup,
+    sendPasswordResetEmail, getFirestore, doc, getDoc, setDoc;
 
 let app, auth, db;
 let currentUser = null;
@@ -992,12 +1008,35 @@ let firebaseReady = false;
 
 if (isFirebaseConfigured) {
   try {
+    // Only import Firebase SDK when actually configured
+    const fbApp = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+    const fbAuth = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+    const fbStore = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+
+    initializeApp = fbApp.initializeApp;
+    getAuth = fbAuth.getAuth;
+    signInWithEmailAndPassword = fbAuth.signInWithEmailAndPassword;
+    createUserWithEmailAndPassword = fbAuth.createUserWithEmailAndPassword;
+    signOut = fbAuth.signOut;
+    onAuthStateChanged = fbAuth.onAuthStateChanged;
+    updateProfile = fbAuth.updateProfile;
+    GoogleAuthProvider = fbAuth.GoogleAuthProvider;
+    signInWithPopup = fbAuth.signInWithPopup;
+    sendPasswordResetEmail = fbAuth.sendPasswordResetEmail;
+    getFirestore = fbStore.getFirestore;
+    doc = fbStore.doc;
+    getDoc = fbStore.getDoc;
+    setDoc = fbStore.setDoc;
+
     app = initializeApp(FIREBASE_CONFIG);
     auth = getAuth(app);
     db = getFirestore(app);
     firebaseReady = true;
   } catch(e) {
     console.warn('Firebase init failed:', e);
+    // Still show the app in offline mode
+    document.getElementById('loading-screen').style.display = 'none';
+    document.getElementById('auth-screen').style.display = 'flex';
   }
 }
 
@@ -1153,9 +1192,10 @@ if (firebaseReady) {
     }
   });
 } else {
-  // No Firebase — show offline option
-  document.getElementById('loading-screen').style.display = 'none';
-  document.getElementById('auth-screen').style.display = 'flex';
+  // Firebase not configured — go straight to offline/local mode (no login required)
+  // The loading screen is already hidden by the inline script above.
+  // Auto-launch in local mode so user can start using the app immediately.
+  await initApp(null);
   document.getElementById('config-notice').classList.add('show');
 }
 
