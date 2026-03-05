@@ -1,0 +1,1930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyLife — Your Life, Tracked</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- ════════════════════════════════════════════════
+     🔧 FIREBASE CONFIG — REPLACE THESE VALUES
+     Follow the hosting guide to get these values
+════════════════════════════════════════════════ -->
+<script>
+  const firebaseConfig = {
+  apiKey: "AIzaSyB5v4rXWR7J6yQV1mbrz4by3uQkK0wWcEg",
+  authDomain: "mylife-tracker-eaefd.firebaseapp.com",
+  projectId: "mylife-tracker-eaefd",
+  storageBucket: "mylife-tracker-eaefd.firebasestorage.app",
+  messagingSenderId: "861377087726",
+  appId: "1:861377087726:web:8473d40f8a2e6b86c74bff",
+  measurementId: "G-FDV5ERN6SZ"
+};
+</script>
+
+<style>
+/* ═══════════════════════ DESIGN SYSTEM ═══════════════════════ */
+:root {
+  --bg: #080b12;
+  --surface: #0e1420;
+  --surface2: #151d2e;
+  --surface3: #1c2640;
+  --border: #1e2d47;
+  --border2: #263552;
+  --accent: #e8622a;
+  --accent-glow: rgba(232,98,42,0.2);
+  --accent2: #f0b429;
+  --accent3: #36d399;
+  --accent4: #3b82f6;
+  --text: #e8edf5;
+  --text2: #8b9ab5;
+  --text3: #4a5a78;
+  --radius: 14px;
+  --radius2: 8px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.4);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Starfield background */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0;
+  background:
+    radial-gradient(ellipse at 20% 20%, rgba(59,130,246,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 80%, rgba(232,98,42,0.04) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+/* ═══════════════════════ AUTH SCREEN ═══════════════════════ */
+#auth-screen {
+  position: fixed; inset: 0; z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg);
+}
+.auth-card {
+  width: min(420px, 94vw);
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  padding: 2.5rem;
+  box-shadow: 0 0 60px rgba(232,98,42,0.08), var(--shadow);
+  animation: fadeUp 0.5s ease;
+}
+@keyframes fadeUp {
+  from { opacity:0; transform: translateY(20px); }
+  to { opacity:1; transform: translateY(0); }
+}
+.auth-logo {
+  font-family: 'Instrument Serif', serif;
+  font-size: 2rem; color: var(--accent);
+  text-align: center; margin-bottom: 0.25rem;
+  letter-spacing: -1px;
+}
+.auth-tagline {
+  text-align: center; color: var(--text2); font-size: 0.85rem;
+  margin-bottom: 2rem;
+}
+.auth-tabs {
+  display: flex; background: var(--surface2); border-radius: 10px;
+  padding: 4px; margin-bottom: 1.5rem;
+}
+.auth-tab {
+  flex: 1; padding: 0.5rem; border: none; border-radius: 7px;
+  background: none; color: var(--text2); font-family: 'Outfit', sans-serif;
+  font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.2s;
+}
+.auth-tab.active { background: var(--surface3); color: var(--text); }
+.auth-form { display: none; flex-direction: column; gap: 1rem; }
+.auth-form.active { display: flex; }
+.auth-error {
+  background: rgba(232,98,42,0.1); border: 1px solid rgba(232,98,42,0.3);
+  color: var(--accent); padding: 0.6rem 1rem; border-radius: 8px;
+  font-size: 0.85rem; display: none;
+}
+.auth-error.show { display: block; }
+.auth-divider {
+  text-align: center; color: var(--text3); font-size: 0.8rem;
+  position: relative; margin: 0.5rem 0;
+}
+.auth-divider::before, .auth-divider::after {
+  content: ''; position: absolute; top: 50%;
+  width: 40%; height: 1px; background: var(--border);
+}
+.auth-divider::before { left: 0; } .auth-divider::after { right: 0; }
+.btn-google {
+  display: flex; align-items: center; justify-content: center; gap: 0.75rem;
+  padding: 0.65rem; border-radius: 10px; border: 1px solid var(--border2);
+  background: var(--surface2); color: var(--text); font-family: 'Outfit', sans-serif;
+  font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.2s; width: 100%;
+}
+.btn-google:hover { border-color: var(--accent4); background: var(--surface3); }
+.google-icon { width: 18px; height: 18px; }
+
+/* ═══════════════════════ NAV ═══════════════════════ */
+#app { display: none; position: relative; z-index: 1; }
+#app.visible { display: block; }
+
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; padding: 0 1.5rem;
+  height: 58px;
+  background: rgba(8,11,18,0.88);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+}
+.nav-logo {
+  font-family: 'Instrument Serif', serif;
+  font-size: 1.3rem; color: var(--accent);
+  margin-right: 1.5rem; flex-shrink: 0;
+  display: flex; align-items: center; gap: 0.4rem;
+}
+.nav-links { display: flex; gap: 0.25rem; flex: 1; }
+.nav-btn {
+  background: none; border: none; cursor: pointer;
+  color: var(--text2); font-family: 'Outfit', sans-serif;
+  font-size: 0.83rem; font-weight: 500;
+  padding: 0.4rem 0.85rem; border-radius: 7px; transition: all 0.2s;
+  white-space: nowrap;
+}
+.nav-btn:hover { background: var(--surface2); color: var(--text); }
+.nav-btn.active { background: var(--surface3); color: var(--accent); }
+.nav-right { margin-left: auto; display: flex; align-items: center; gap: 0.75rem; }
+.nav-user { font-size: 0.8rem; color: var(--text2); }
+.nav-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.8rem; font-weight: 700; color: white; cursor: pointer;
+}
+
+/* ═══════════════════════ PAGES ═══════════════════════ */
+.page { display: none; padding: 74px 1.5rem 2.5rem; max-width: 1180px; margin: 0 auto; min-height: 100vh; }
+.page.active { display: block; animation: fadeIn 0.3s ease; }
+@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+
+/* ═══════════════════════ COMMON COMPONENTS ═══════════════════════ */
+.section-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 1.9rem; margin-bottom: 1.25rem;
+  display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+}
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+}
+.card-sm { padding: 1rem; }
+.card-title {
+  font-size: 0.72rem; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--text3); margin-bottom: 1rem;
+}
+.btn {
+  display: inline-flex; align-items: center; gap: 0.45rem;
+  padding: 0.5rem 1.2rem; border-radius: var(--radius2);
+  font-family: 'Outfit', sans-serif; font-size: 0.875rem; font-weight: 500;
+  cursor: pointer; border: none; transition: all 0.2s; white-space: nowrap;
+}
+.btn-primary { background: var(--accent); color: white; }
+.btn-primary:hover { background: #d4561e; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(232,98,42,0.3); }
+.btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border2); }
+.btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+.btn-sm { padding: 0.3rem 0.8rem; font-size: 0.8rem; border-radius: 7px; }
+.btn-success { background: var(--accent3); color: #080b12; }
+.btn-success:hover { background: #2bc785; }
+.btn-danger { background: rgba(232,98,42,0.15); color: var(--accent); border: 1px solid rgba(232,98,42,0.3); }
+.input {
+  background: var(--surface2); border: 1px solid var(--border2);
+  color: var(--text); font-family: 'Outfit', sans-serif; font-size: 0.9rem;
+  padding: 0.6rem 1rem; border-radius: var(--radius2);
+  outline: none; transition: border-color 0.2s, box-shadow 0.2s; width: 100%;
+}
+.input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.input::placeholder { color: var(--text3); }
+select.input { cursor: pointer; }
+textarea.input { resize: vertical; min-height: 100px; }
+label { font-size: 0.83rem; color: var(--text2); display: block; margin-bottom: 0.3rem; }
+.form-group { margin-bottom: 1rem; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; }
+.grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 1rem; }
+.flex { display: flex; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.flex-wrap { flex-wrap: wrap; }
+.gap-1 { gap: 0.5rem; }
+.gap-2 { gap: 1rem; }
+.mt-1 { margin-top: 0.5rem; }
+.mt-2 { margin-top: 1rem; }
+.mb-1 { margin-bottom: 0.5rem; }
+.text-xs { font-size: 0.78rem; color: var(--text2); }
+.text-sm { font-size: 0.875rem; }
+.text-accent { color: var(--accent); }
+.text-green { color: var(--accent3); }
+.text-yellow { color: var(--accent2); }
+.text-muted { color: var(--text3); }
+.tag {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 20px; padding: 0.18rem 0.7rem; font-size: 0.75rem; color: var(--text2);
+}
+.tag.red { border-color: var(--accent); color: var(--accent); background: rgba(232,98,42,0.08); }
+.tag.green { border-color: var(--accent3); color: var(--accent3); background: rgba(54,211,153,0.08); }
+.tag.yellow { border-color: var(--accent2); color: var(--accent2); background: rgba(240,180,41,0.08); }
+.tag.blue { border-color: var(--accent4); color: var(--accent4); background: rgba(59,130,246,0.08); }
+.delete-btn {
+  background: none; border: none; color: var(--text3); cursor: pointer;
+  font-size: 1rem; padding: 2px 5px; transition: color 0.15s; line-height: 1;
+}
+.delete-btn:hover { color: var(--accent); }
+.separator { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+
+/* Stat cards */
+.stat-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.25rem 1.5rem;
+  display: flex; flex-direction: column; gap: 0.3rem;
+  transition: border-color 0.2s;
+}
+.stat-card:hover { border-color: var(--border2); }
+.stat-num { font-family: 'JetBrains Mono', monospace; font-size: 2.4rem; font-weight: 500; line-height: 1; }
+.stat-label { font-size: 0.75rem; color: var(--text2); text-transform: uppercase; letter-spacing: 0.07em; margin-top: 0.2rem; }
+.stat-sub { font-size: 0.75rem; color: var(--text3); margin-top: 0.15rem; }
+
+/* Progress ring */
+.progress-ring-wrap { position: relative; display: inline-flex; align-items: center; justify-content: center; }
+.progress-ring-text { position: absolute; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; text-align: center; }
+
+/* BTECH countdown banner */
+.btech-banner {
+  background: linear-gradient(135deg, var(--surface) 0%, var(--surface2) 100%);
+  border: 1px solid var(--border2);
+  border-left: 3px solid var(--accent2);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1rem;
+  display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;
+}
+.btech-years {
+  display: flex; gap: 1.25rem; flex-wrap: wrap;
+}
+.btech-stat { text-align: center; }
+.btech-num { font-family: 'JetBrains Mono', monospace; font-size: 1.6rem; font-weight: 500; }
+.btech-lbl { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); }
+
+/* ═══════════════════════ CALENDAR ═══════════════════════ */
+.cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+.cal-month-label { font-family: 'Instrument Serif', serif; font-size: 1.35rem; }
+.calendar-wrap { overflow-x: auto; }
+.calendar { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.calendar th {
+  padding: 0.5rem; text-align: center; color: var(--text3);
+  font-weight: 500; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em;
+}
+.calendar td { padding: 0; width: calc(100%/7); vertical-align: top; border: 1px solid var(--border); }
+.cal-day { min-height: 82px; padding: 0.4rem; cursor: pointer; transition: background 0.12s; position: relative; }
+.cal-day:hover { background: var(--surface2); }
+.cal-day .day-num {
+  font-size: 0.72rem; font-weight: 600; font-family: 'JetBrains Mono', monospace;
+  color: var(--text2); display: flex; align-items: center; justify-content: space-between;
+}
+.cal-day.today .day-num { color: var(--accent); }
+.cal-day.today { background: rgba(232,98,42,0.05); }
+.cal-day.other-month { opacity: 0.25; pointer-events: none; }
+.cal-day.vacation { background: rgba(54,211,153,0.04); }
+.cal-day.exam-day { background: rgba(232,98,42,0.04); }
+.cal-day.weekend .day-num { color: var(--accent4); }
+.cal-events { margin-top: 3px; display: flex; flex-direction: column; gap: 2px; }
+.cal-event-chip { font-size: 0.62rem; padding: 1px 5px; border-radius: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chip-exam { background: rgba(232,98,42,0.25); color: #f09474; }
+.chip-vacation { background: rgba(54,211,153,0.2); color: var(--accent3); }
+.chip-festival { background: rgba(240,180,41,0.2); color: var(--accent2); }
+.chip-user { background: rgba(59,130,246,0.2); color: #7ab3ff; }
+.chip-tithi { background: rgba(74,90,120,0.3); color: var(--text3); font-size: 0.58rem; }
+.chip-bday { background: rgba(168,85,247,0.2); color: #c084fc; }
+
+/* ═══════════════════════ MODALS ═══════════════════════ */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.75); backdrop-filter: blur(6px);
+  align-items: center; justify-content: center; padding: 1rem;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: var(--radius); padding: 2rem;
+  width: min(600px, 100%); max-height: 87vh; overflow-y: auto;
+  position: relative; animation: fadeUp 0.25s ease;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.modal-title { font-family: 'Instrument Serif', serif; font-size: 1.5rem; margin-bottom: 1.5rem; }
+.modal-close {
+  position: absolute; top: 1rem; right: 1rem;
+  background: var(--surface2); border: none; color: var(--text2);
+  width: 28px; height: 28px; border-radius: 50%;
+  cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.modal-close:hover { background: var(--surface3); color: var(--text); }
+
+/* Wizard */
+.wizard-progress { display: flex; gap: 0.4rem; margin-bottom: 2rem; }
+.wiz-dot { flex: 1; height: 3px; border-radius: 2px; background: var(--border); transition: background 0.3s; }
+.wiz-dot.done { background: var(--accent3); }
+.wiz-dot.current { background: var(--accent2); }
+.wizard-step { display: none; }
+.wizard-step.active { display: block; animation: fadeIn 0.2s ease; }
+
+/* ═══════════════════════ TRACKING ═══════════════════════ */
+.day-header { font-size: 0.62rem; color: var(--text3); text-align: center; padding: 0.25rem; text-transform: uppercase; }
+.track-cal-day {
+  min-height: 58px; padding: 0.4rem; cursor: pointer;
+  border: 1px solid var(--border); border-radius: var(--radius2);
+  background: var(--surface); transition: all 0.12s;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+}
+.track-cal-day:hover { border-color: var(--accent4); background: var(--surface2); }
+.track-cal-day.selected { border-color: var(--accent); }
+.t-num { font-size: 0.7rem; color: var(--text2); font-family: 'JetBrains Mono', monospace; }
+.t-count { font-size: 1.05rem; font-weight: 600; }
+.t-with { color: var(--accent); }
+.t-without { color: var(--accent3); }
+.t-mixed { color: var(--accent2); }
+.track-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 0.35rem; }
+
+/* ═══════════════════════ DIARY ═══════════════════════ */
+.diary-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 0.35rem; }
+.diary-cal-day {
+  padding: 0.45rem; border: 1px solid var(--border);
+  border-radius: var(--radius2); background: var(--surface);
+  cursor: pointer; transition: all 0.12s; text-align: center;
+}
+.diary-cal-day:hover { border-color: var(--accent4); background: var(--surface2); }
+.diary-cal-day.selected { border-color: var(--accent); }
+.d-num { font-size: 0.7rem; font-family: 'JetBrains Mono', monospace; color: var(--text2); }
+.d-pct { font-size: 0.85rem; font-weight: 600; margin-top: 2px; }
+.milestone-item {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.7rem 0.9rem; background: var(--surface2); border-radius: var(--radius2);
+  border: 1px solid var(--border); margin-bottom: 0.4rem; transition: border-color 0.15s;
+}
+.milestone-item:hover { border-color: var(--border2); }
+.milestone-item input[type=checkbox] { accent-color: var(--accent); width: 16px; height: 16px; cursor: pointer; flex-shrink:0; }
+.milestone-item .m-name { flex: 1; font-size: 0.875rem; }
+.milestone-item .m-badge { font-size: 0.68rem; color: var(--text3); white-space:nowrap; }
+.expense-row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center; }
+.diary-page { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 2rem; }
+.diary-date-header {
+  font-family: 'Instrument Serif', serif; font-size: 1.75rem; margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border); padding-bottom: 1rem;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;
+}
+.progress-bar-wrap { background: var(--border); border-radius: 4px; height: 7px; overflow: hidden; }
+.progress-bar { height: 100%; border-radius: 4px; background: var(--accent3); transition: width 0.3s, background 0.3s; }
+
+/* ═══════════════════════ STREAK / INSIGHTS ═══════════════════════ */
+.insight-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.25rem;
+  display: flex; align-items: flex-start; gap: 1rem;
+}
+.insight-icon { font-size: 1.8rem; line-height: 1; flex-shrink: 0; }
+.insight-title { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); margin-bottom: 0.25rem; }
+.insight-value { font-family: 'JetBrains Mono', monospace; font-size: 1.5rem; font-weight: 500; }
+
+/* ═══════════════════════ TOAST ═══════════════════════ */
+#toast {
+  position: fixed; bottom: 2rem; right: 2rem; z-index: 9999;
+  background: var(--surface3); border: 1px solid var(--border2);
+  border-radius: 10px; padding: 0.75rem 1.25rem;
+  font-size: 0.875rem; color: var(--text);
+  box-shadow: var(--shadow);
+  opacity: 0; transform: translateY(10px);
+  transition: all 0.3s; pointer-events: none;
+}
+#toast.show { opacity: 1; transform: translateY(0); }
+#toast.success { border-left: 3px solid var(--accent3); }
+#toast.error { border-left: 3px solid var(--accent); }
+
+/* ═══════════════════════ LOADING ═══════════════════════ */
+.spinner {
+  width: 20px; height: 20px; border: 2px solid var(--border2);
+  border-top-color: var(--accent); border-radius: 50%;
+  animation: spin 0.7s linear infinite; display: inline-block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+#loading-screen {
+  position: fixed; inset: 0; z-index: 500;
+  background: var(--bg); display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 1rem;
+}
+#loading-screen .load-logo { font-family: 'Instrument Serif', serif; font-size: 2rem; color: var(--accent); }
+
+/* Empty state */
+.empty-state { text-align: center; padding: 3rem 1rem; color: var(--text3); }
+.empty-state .e-icon { font-size: 3rem; margin-bottom: 1rem; }
+.empty-state h3 { font-size: 1.05rem; color: var(--text2); margin-bottom: 0.5rem; }
+
+/* Config notice */
+.config-notice {
+  background: rgba(240,180,41,0.08); border: 1px solid rgba(240,180,41,0.3);
+  border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1.5rem;
+  font-size: 0.85rem; color: var(--accent2); display: none;
+}
+.config-notice.show { display: block; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+@media (max-width: 768px) {
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  .btech-years { gap: 0.75rem; }
+  .cal-day { min-height: 55px; }
+  nav { padding: 0 1rem; }
+  .page { padding: 66px 1rem 2rem; }
+  .modal { padding: 1.5rem; }
+  .diary-page { padding: 1.25rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- Loading screen -->
+<div id="loading-screen">
+  <div class="load-logo">✦ MyLife</div>
+  <div class="spinner"></div>
+</div>
+
+<!-- Firebase not configured notice -->
+<div class="config-notice" id="config-notice">
+  ⚠️ Firebase is not configured yet. Data will be saved locally only. Follow the hosting guide to enable cloud sync & login.
+</div>
+
+<!-- ═══════════════════════ AUTH SCREEN ═══════════════════════ -->
+<div id="auth-screen" style="display:none">
+  <div class="auth-card">
+    <div class="auth-logo">✦ MyLife</div>
+    <div class="auth-tagline">Your college & life tracker, anywhere</div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('login')">Sign In</button>
+      <button class="auth-tab" onclick="switchAuthTab('signup')">Create Account</button>
+    </div>
+
+    <!-- Login form -->
+    <form class="auth-form active" id="login-form" onsubmit="handleLogin(event)">
+      <div class="auth-error" id="login-error"></div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" class="input" id="login-email" placeholder="you@example.com" required>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" class="input" id="login-password" placeholder="••••••••" required>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center" id="login-btn">Sign In</button>
+      <button type="button" class="btn btn-secondary" style="width:100%;justify-content:center;font-size:0.8rem" onclick="handleForgotPassword()">Forgot password?</button>
+    </form>
+
+    <!-- Signup form -->
+    <form class="auth-form" id="signup-form" onsubmit="handleSignup(event)">
+      <div class="auth-error" id="signup-error"></div>
+      <div class="form-group">
+        <label>Display Name</label>
+        <input type="text" class="input" id="signup-name" placeholder="Your name" required>
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" class="input" id="signup-email" placeholder="you@example.com" required>
+      </div>
+      <div class="form-group">
+        <label>Password (min 6 characters)</label>
+        <input type="password" class="input" id="signup-password" placeholder="••••••••" required minlength="6">
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center" id="signup-btn">Create Account</button>
+    </form>
+
+    <div class="auth-divider">or</div>
+    <button class="btn-google" onclick="handleGoogleSignIn()">
+      <svg class="google-icon" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      Continue with Google
+    </button>
+
+    <div id="auth-offline-mode" style="margin-top:1rem;text-align:center">
+      <button class="btn btn-secondary" style="width:100%;justify-content:center;font-size:0.8rem" onclick="useOfflineMode()">Continue without account (local only)</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ MAIN APP ═══════════════════════ -->
+<div id="app">
+  <nav>
+    <div class="nav-logo">✦ MyLife</div>
+    <div class="nav-links">
+      <button class="nav-btn active" onclick="showPage('main')">🎓 College</button>
+      <button class="nav-btn" onclick="showPage('tracking')">📊 Track</button>
+      <button class="nav-btn" onclick="showPage('diary')">📔 Diary</button>
+      <button class="nav-btn" onclick="showPage('insights')">✨ Insights</button>
+    </div>
+    <div class="nav-right">
+      <div class="nav-user" id="nav-user-name"></div>
+      <div class="nav-avatar" id="nav-avatar" title="Account" onclick="toggleUserMenu()">?</div>
+    </div>
+  </nav>
+
+  <!-- User menu dropdown -->
+  <div id="user-menu" style="display:none;position:fixed;top:60px;right:1.5rem;z-index:150;background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:0.75rem;min-width:180px;box-shadow:var(--shadow)">
+    <div style="font-size:0.8rem;color:var(--text2);padding:0.25rem 0.5rem;margin-bottom:0.5rem" id="user-menu-email"></div>
+    <button class="btn btn-secondary btn-sm" style="width:100%;justify-content:center;margin-bottom:0.4rem" onclick="showPage('btech-setup');toggleUserMenu()">⚙️ BTech Settings</button>
+    <button class="btn btn-danger btn-sm" style="width:100%;justify-content:center" onclick="handleSignOut()">Sign Out</button>
+  </div>
+
+  <!-- ═══ COLLEGE PAGE ═══ -->
+  <div id="page-main" class="page active">
+    <div id="config-notice-inline" class="config-notice"></div>
+
+    <!-- BTech Countdown Banner -->
+    <div class="btech-banner" id="btech-banner" style="display:none">
+      <div>
+        <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);margin-bottom:0.25rem">BTech Journey</div>
+        <div style="font-family:'Instrument Serif',serif;font-size:1.1rem" id="btech-label">B.Tech</div>
+      </div>
+      <div class="btech-years" id="btech-years"></div>
+      <div style="margin-left:auto">
+        <div style="font-size:0.7rem;color:var(--text3);margin-bottom:0.25rem">Overall Progress</div>
+        <div class="progress-bar-wrap" style="width:160px">
+          <div class="progress-bar" id="btech-progress" style="background:var(--accent2)"></div>
+        </div>
+        <div style="font-size:0.72rem;color:var(--text3);margin-top:0.25rem" id="btech-progress-lbl"></div>
+      </div>
+    </div>
+
+    <!-- Setup prompt -->
+    <div id="setup-prompt" style="display:none" class="empty-state">
+      <div class="e-icon">🎓</div>
+      <h3>Set up your semester</h3>
+      <p style="margin-bottom:1.5rem;font-size:0.875rem">Track exams, vacations, and your college calendar</p>
+      <button class="btn btn-primary" onclick="openSetup()">Start Setup →</button>
+    </div>
+
+    <div id="main-content">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.75rem">
+        <div>
+          <div class="section-title" style="margin-bottom:0.2rem">
+            <span>🎓</span><span id="sem-title">—</span>
+          </div>
+          <div class="text-xs" id="sem-dates">No semester configured</div>
+        </div>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+          <button class="btn btn-secondary btn-sm" onclick="openSetup()">✏️ Edit Semester</button>
+          <button class="btn btn-secondary btn-sm" onclick="openSetup(4)">🏖️ Vacations</button>
+        </div>
+      </div>
+
+      <div class="grid-4" style="margin-bottom:1rem">
+        <div class="stat-card"><div class="stat-num text-accent" id="stat-days-left">—</div><div class="stat-label">Days Left</div><div class="stat-sub" id="stat-sem-end-lbl"></div></div>
+        <div class="stat-card"><div class="stat-num text-green" id="stat-vacation-days">—</div><div class="stat-label">Vacation Days</div></div>
+        <div class="stat-card"><div class="stat-num text-yellow" id="stat-exam-days">—</div><div class="stat-label">Exam Days Left</div></div>
+        <div class="stat-card"><div class="stat-num" id="stat-sem-pct" style="color:var(--accent4)">—</div><div class="stat-label">Sem Completed</div></div>
+      </div>
+
+      <div class="grid-2" style="margin-bottom:1rem">
+        <div class="card">
+          <div class="card-title">📚 Courses</div>
+          <div id="courses-list"><p class="text-xs text-muted">No courses added</p></div>
+          <button class="btn btn-secondary btn-sm mt-2" onclick="openSetup(2)" style="margin-top:1rem">+ Manage</button>
+        </div>
+        <div class="card">
+          <div class="card-title">📝 Exams & Papers</div>
+          <div id="exams-list"><p class="text-xs text-muted">No exams added</p></div>
+          <button class="btn btn-secondary btn-sm mt-2" onclick="openSetup(3)" style="margin-top:1rem">+ Manage</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:1rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem">
+          <div class="card-title" style="margin-bottom:0">🏖️ Upcoming Vacations</div>
+          <button class="btn btn-secondary btn-sm" onclick="openSetup(4)">+ Manage</button>
+        </div>
+        <div id="vacations-list"><p class="text-xs text-muted">No vacations added</p></div>
+      </div>
+
+      <!-- Main Calendar -->
+      <div class="card">
+        <div class="cal-nav">
+          <button class="btn btn-secondary btn-sm" onclick="prevMonth()">← Prev</button>
+          <div class="cal-month-label" id="cal-month-label"></div>
+          <button class="btn btn-secondary btn-sm" onclick="nextMonth()">Next →</button>
+        </div>
+        <div class="calendar-wrap">
+          <table class="calendar">
+            <thead><tr>
+              <th>Sun</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th>
+            </tr></thead>
+            <tbody id="cal-body"></tbody>
+          </table>
+        </div>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:1rem">
+          <span class="cal-event-chip chip-exam" style="padding:3px 8px;border-radius:5px">Exam</span>
+          <span class="cal-event-chip chip-vacation" style="padding:3px 8px;border-radius:5px">Vacation</span>
+          <span class="cal-event-chip chip-festival" style="padding:3px 8px;border-radius:5px">Festival</span>
+          <span class="cal-event-chip chip-user" style="padding:3px 8px;border-radius:5px">My Event</span>
+          <span class="cal-event-chip chip-tithi" style="padding:3px 8px;border-radius:5px">Tithi</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ BTECH SETUP PAGE ═══ -->
+  <div id="page-btech-setup" class="page">
+    <div class="section-title">⚙️ BTech Journey Setup</div>
+    <div class="card">
+      <div class="card-title">Your BTech Details</div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Degree / Program Name</label>
+          <input type="text" class="input" id="bt-degree" placeholder="e.g. B.Tech Computer Science">
+        </div>
+        <div class="form-group">
+          <label>College / University Name</label>
+          <input type="text" class="input" id="bt-college" placeholder="e.g. IIT Bombay">
+        </div>
+        <div class="form-group">
+          <label>Started On</label>
+          <input type="date" class="input" id="bt-start">
+        </div>
+        <div class="form-group">
+          <label>Expected End Date</label>
+          <input type="date" class="input" id="bt-end">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="saveBTech()">💾 Save</button>
+    </div>
+    <div class="card" id="btech-preview" style="display:none">
+      <div class="card-title">Preview</div>
+      <div id="btech-preview-content"></div>
+    </div>
+  </div>
+
+  <!-- ═══ TRACKING PAGE ═══ -->
+  <div id="page-tracking" class="page">
+    <div class="section-title">📊 Habit Tracker</div>
+
+    <div class="card" style="margin-bottom:1rem">
+      <div class="card-title">What are you tracking?</div>
+      <div style="display:flex;gap:0.5rem;align-items:flex-end;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px">
+          <label>Activity Name</label>
+          <input class="input" id="tracking-name" placeholder="e.g. Workout, Reading, Meditation...">
+        </div>
+        <button class="btn btn-primary" onclick="setTrackingName()">Set</button>
+        <div id="tracking-name-display" class="tag blue" style="display:none"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:1rem">
+      <div class="cal-nav" style="margin-bottom:0.75rem">
+        <button class="btn btn-secondary btn-sm" onclick="trackPrevMonth()">←</button>
+        <span class="cal-month-label" style="font-size:1.1rem" id="track-month-label"></span>
+        <button class="btn btn-secondary btn-sm" onclick="trackNextMonth()">→</button>
+      </div>
+      <div style="display:flex;gap:0.75rem;margin-bottom:0.75rem;flex-wrap:wrap">
+        <span class="tag red">● With "it"</span>
+        <span class="tag green">● Without</span>
+        <span class="tag yellow">● Mixed</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:0.5rem">
+        <div class="day-header">S</div><div class="day-header">M</div><div class="day-header">T</div>
+        <div class="day-header">W</div><div class="day-header">T</div><div class="day-header">F</div>
+        <div class="day-header">S</div>
+      </div>
+      <div id="track-grid" class="track-grid"></div>
+      <!-- Monthly summary -->
+      <div style="display:flex;gap:1rem;margin-top:1rem;flex-wrap:wrap">
+        <span class="text-xs">Month Total: <span id="track-month-total" style="color:var(--text);font-weight:600">0</span></span>
+        <span class="text-xs">With "it": <span id="track-month-with" style="color:var(--accent);font-weight:600">0</span></span>
+        <span class="text-xs">Without: <span id="track-month-without" style="color:var(--accent3);font-weight:600">0</span></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Log Entry</div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" class="input" id="log-date">
+        </div>
+        <div class="form-group">
+          <label>Count (how many times)</label>
+          <input type="number" class="input" id="log-count" value="1" min="0">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Done while watching/doing "it"?</label>
+        <select class="input" id="log-with-it">
+          <option value="no">No — clean 💪</option>
+          <option value="yes">Yes — with "it" 👁️</option>
+          <option value="mixed">Mixed</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Notes</label>
+        <input type="text" class="input" id="log-note" placeholder="Optional note...">
+      </div>
+      <button class="btn btn-primary" onclick="saveTrackLog()">💾 Save Entry</button>
+    </div>
+  </div>
+
+  <!-- ═══ DIARY PAGE ═══ -->
+  <div id="page-diary" class="page">
+    <div class="section-title">
+      <span>📔</span> Daily Diary
+      <button class="btn btn-secondary btn-sm" style="margin-left:auto;font-size:0.78rem" onclick="openMilestoneEditor()">⚙️ Edit Milestones</button>
+    </div>
+
+    <div class="card" style="margin-bottom:1rem">
+      <div class="cal-nav" style="margin-bottom:0.75rem">
+        <button class="btn btn-secondary btn-sm" onclick="diaryPrevMonth()">←</button>
+        <span class="cal-month-label" style="font-size:1.1rem" id="diary-month-label"></span>
+        <button class="btn btn-secondary btn-sm" onclick="diaryNextMonth()">→</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:0.5rem">
+        <div class="day-header">Sun</div><div class="day-header">Mon</div><div class="day-header">Tue</div>
+        <div class="day-header">Wed</div><div class="day-header">Thu</div><div class="day-header">Fri</div>
+        <div class="day-header">Sat</div>
+      </div>
+      <div id="diary-grid" class="diary-grid"></div>
+    </div>
+
+    <div id="diary-entry-section" style="display:none">
+      <div class="diary-page">
+        <div class="diary-date-header">
+          <span id="diary-entry-date"></span>
+          <span id="diary-mood-emoji" style="font-size:1.5rem;cursor:pointer" title="Click to set mood" onclick="cycleMood()">😐</span>
+        </div>
+
+        <div style="margin-bottom:1.5rem">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">
+            <span class="text-xs">Day Score</span>
+            <span id="diary-score-display" style="font-family:'JetBrains Mono',monospace;font-size:0.875rem;color:var(--accent3)">0%</span>
+          </div>
+          <div class="progress-bar-wrap"><div class="progress-bar" id="diary-progress-bar" style="width:0%"></div></div>
+        </div>
+
+        <hr class="separator">
+        <div style="margin-bottom:1.5rem">
+          <div class="card-title">✅ Milestones</div>
+          <div id="diary-milestones-list"></div>
+          <div id="diary-no-milestones" class="text-xs text-muted" style="display:none">No milestones set. Click "Edit Milestones" above.</div>
+        </div>
+
+        <hr class="separator">
+        <div style="margin-bottom:1.5rem">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem">
+            <div class="card-title" style="margin-bottom:0">💸 Expenses</div>
+            <button class="btn btn-secondary btn-sm" onclick="addExpenseRow()">+ Add</button>
+          </div>
+          <div id="expenses-container"></div>
+          <div style="display:flex;justify-content:flex-end;margin-top:0.5rem;gap:1rem">
+            <span class="text-xs">Total: <span class="tag yellow">₹<span id="expense-total">0</span></span></span>
+          </div>
+        </div>
+
+        <hr class="separator">
+        <div style="margin-bottom:1.5rem">
+          <div class="card-title">🖊️ Journal</div>
+          <textarea class="input" id="diary-journal" placeholder="How was your day? What did you feel, think, experience..." style="min-height:130px"></textarea>
+        </div>
+
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="saveDiaryEntry()">💾 Save Entry</button>
+          <button class="btn btn-secondary" onclick="closeDiaryEntry()">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ INSIGHTS PAGE ═══ -->
+  <div id="page-insights" class="page">
+    <div class="section-title">✨ Insights & Streaks</div>
+
+    <div class="grid-2" style="margin-bottom:1rem" id="insights-grid">
+      <div class="insight-card">
+        <div class="insight-icon">🔥</div>
+        <div>
+          <div class="insight-title">Current Streak (Diary)</div>
+          <div class="insight-value" id="ins-streak">0 days</div>
+        </div>
+      </div>
+      <div class="insight-card">
+        <div class="insight-icon">📅</div>
+        <div>
+          <div class="insight-title">Diary Entries Total</div>
+          <div class="insight-value" id="ins-total-entries">0</div>
+        </div>
+      </div>
+      <div class="insight-card">
+        <div class="insight-icon">💰</div>
+        <div>
+          <div class="insight-title">Total Expenses (All Time)</div>
+          <div class="insight-value" id="ins-total-expense">₹0</div>
+        </div>
+      </div>
+      <div class="insight-card">
+        <div class="insight-icon">📊</div>
+        <div>
+          <div class="insight-title">Avg Day Score (Last 30)</div>
+          <div class="insight-value" id="ins-avg-score">0%</div>
+        </div>
+      </div>
+      <div class="insight-card">
+        <div class="insight-icon">👁️</div>
+        <div>
+          <div class="insight-title">Tracking — Total Count</div>
+          <div class="insight-value" id="ins-track-total">0</div>
+        </div>
+      </div>
+      <div class="insight-card">
+        <div class="insight-icon">💪</div>
+        <div>
+          <div class="insight-title">Tracking — Clean Days</div>
+          <div class="insight-value" id="ins-track-clean">0 days</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📈 Last 30 Days — Day Scores</div>
+      <div id="ins-bar-chart" style="display:flex;align-items:flex-end;gap:3px;height:80px;margin-top:0.5rem"></div>
+      <div style="display:flex;justify-content:space-between;margin-top:0.25rem">
+        <span class="text-xs">30 days ago</span><span class="text-xs">Today</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🌡️ Mood Distribution (Last 30 Days)</div>
+      <div id="ins-mood-chart" style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-top:0.5rem"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════ MODALS ════════════════════ -->
+
+<!-- Semester Setup Wizard -->
+<div class="modal-overlay" id="setup-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeSetup()">✕</button>
+    <div class="modal-title">🎓 Semester Setup</div>
+    <div class="wizard-progress" id="wiz-progress"></div>
+    <div class="wizard-step" id="step-1">
+      <div class="card-title">Step 1 — Semester Info</div>
+      <div class="form-group"><label>Semester Name / Number</label><input type="text" class="input" id="s-sem-name" placeholder="e.g. Semester 5 | 3rd Year Sem 1"></div>
+      <div class="grid-2">
+        <div class="form-group"><label>Start Date</label><input type="date" class="input" id="s-sem-start"></div>
+        <div class="form-group"><label>End Date</label><input type="date" class="input" id="s-sem-end"></div>
+      </div>
+      <button class="btn btn-primary" onclick="wizNext(2)">Next →</button>
+    </div>
+    <div class="wizard-step" id="step-2">
+      <div class="card-title">Step 2 — Courses</div>
+      <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;flex-wrap:wrap">
+        <input type="text" class="input" id="s-course-input" placeholder="Course name..." style="flex:1;min-width:130px">
+        <select class="input" id="s-course-exam" style="width:auto;min-width:110px">
+          <option value="yes">Has Exam</option><option value="no">No Exam</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="addCourse()">Add</button>
+      </div>
+      <div id="s-courses-list" style="margin-bottom:1rem;max-height:200px;overflow-y:auto"></div>
+      <div style="display:flex;gap:0.5rem"><button class="btn btn-secondary" onclick="wizNext(1)">← Back</button><button class="btn btn-primary" onclick="wizNext(3)">Next →</button></div>
+    </div>
+    <div class="wizard-step" id="step-3">
+      <div class="card-title">Step 3 — Exam Period</div>
+      <div class="grid-2">
+        <div class="form-group"><label>Exam Period Start</label><input type="date" class="input" id="s-exam-start"></div>
+        <div class="form-group"><label>Exam Period End</label><input type="date" class="input" id="s-exam-end"></div>
+      </div>
+      <div style="margin:0.75rem 0">
+        <div class="card-title">Individual Paper Dates</div>
+        <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;flex-wrap:wrap">
+          <input type="text" class="input" id="s-paper-name" placeholder="Paper name..." style="flex:1;min-width:120px">
+          <input type="date" class="input" id="s-paper-date" style="width:auto">
+          <button class="btn btn-primary btn-sm" onclick="addPaper()">Add</button>
+        </div>
+        <div id="s-papers-list" style="max-height:150px;overflow-y:auto"></div>
+      </div>
+      <div style="display:flex;gap:0.5rem"><button class="btn btn-secondary" onclick="wizNext(2)">← Back</button><button class="btn btn-primary" onclick="wizNext(4)">Next →</button></div>
+    </div>
+    <div class="wizard-step" id="step-4">
+      <div class="card-title">Step 4 — Vacations & Holidays</div>
+      <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;flex-wrap:wrap">
+        <input type="text" class="input" id="s-vac-name" placeholder="Vacation name..." style="flex:1;min-width:110px">
+        <input type="date" class="input" id="s-vac-from" style="width:auto">
+        <input type="date" class="input" id="s-vac-to" style="width:auto">
+        <button class="btn btn-primary btn-sm" onclick="addVacation()">Add</button>
+      </div>
+      <div id="s-vac-list" style="margin-bottom:1rem;max-height:200px;overflow-y:auto"></div>
+      <div style="display:flex;gap:0.5rem"><button class="btn btn-secondary" onclick="wizNext(3)">← Back</button><button class="btn btn-success" onclick="saveSetup()">✓ Save Semester</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Event Modal -->
+<div class="modal-overlay" id="event-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeEventModal()">✕</button>
+    <div class="modal-title" id="event-modal-title"></div>
+    <div id="event-modal-existing" style="margin-bottom:1rem"></div>
+    <hr class="separator" style="margin:0.75rem 0">
+    <div class="card-title">Add Custom Event</div>
+    <div class="form-group"><label>Event Name</label><input type="text" class="input" id="new-event-name" placeholder="Event name..." onkeyup="if(event.key==='Enter')addCustomEvent()"></div>
+    <button class="btn btn-primary" onclick="addCustomEvent()">Add Event</button>
+  </div>
+</div>
+
+<!-- Milestone Editor Modal -->
+<div class="modal-overlay" id="milestone-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeMilestoneModal()">✕</button>
+    <div class="modal-title">⚙️ Manage Milestones</div>
+    <div style="display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap">
+      <input type="text" class="input" id="new-ms-name" placeholder="e.g. Exercise, Study 2hrs..." style="flex:1;min-width:130px">
+      <select class="input" id="new-ms-type" style="width:auto">
+        <option value="digital">Digital (✓/✗)</option><option value="analog">Analogue (number)</option>
+      </select>
+      <select class="input" id="new-ms-rated" style="width:auto">
+        <option value="yes">Counts for score</option><option value="no">Doesn't count</option>
+      </select>
+      <button class="btn btn-primary btn-sm" onclick="addMilestone()">Add</button>
+    </div>
+    <div id="ms-list" style="max-height:300px;overflow-y:auto"></div>
+    <button class="btn btn-success" style="margin-top:1rem" onclick="closeMilestoneModal()">Done</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- ══════════════════ FIREBASE SDK ══════════════════ -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+// Check if Firebase is configured
+const isFirebaseConfigured = FIREBASE_CONFIG.apiKey !== "REPLACE_WITH_YOUR_API_KEY";
+
+let app, auth, db;
+let currentUser = null;
+let firebaseReady = false;
+
+if (isFirebaseConfigured) {
+  try {
+    app = initializeApp(FIREBASE_CONFIG);
+    auth = getAuth(app);
+    db = getFirestore(app);
+    firebaseReady = true;
+  } catch(e) {
+    console.warn('Firebase init failed:', e);
+  }
+}
+
+// ─── DATA LAYER ───────────────────────────────────────
+// In-memory data store (synced to Firestore or localStorage)
+window.appData = {
+  semester: null,
+  customEvents: {},
+  trackingName: '',
+  trackingLog: {},
+  milestones: [],
+  diaryEntries: {},
+  btechInfo: null,
+};
+
+async function saveData(key, value) {
+  window.appData[key] = value;
+  if (firebaseReady && currentUser) {
+    try {
+      await setDoc(doc(db, 'users', currentUser.uid, 'data', key), { value: JSON.stringify(value) });
+    } catch(e) { console.warn('Firestore save error:', e); }
+  }
+  // Always backup to localStorage
+  try { localStorage.setItem('mylife_' + key, JSON.stringify(value)); } catch(e) {}
+}
+
+async function loadData(key) {
+  if (firebaseReady && currentUser) {
+    try {
+      const snap = await getDoc(doc(db, 'users', currentUser.uid, 'data', key));
+      if (snap.exists()) {
+        return JSON.parse(snap.data().value);
+      }
+    } catch(e) { console.warn('Firestore load error:', e); }
+  }
+  // Fallback to localStorage
+  try {
+    const raw = localStorage.getItem('mylife_' + key);
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) { return null; }
+}
+
+async function loadAllData() {
+  const keys = ['semester','customEvents','trackingName','trackingLog','milestones','diaryEntries','btechInfo'];
+  for (const k of keys) {
+    const val = await loadData(k);
+    if (val !== null) window.appData[k] = val;
+  }
+}
+
+// Expose save/load to global scope
+window.saveData = saveData;
+window.loadData = loadData;
+window.loadAllData = loadAllData;
+
+// ─── AUTH HANDLERS ─────────────────────────────────────
+window.handleLogin = async (e) => {
+  e.preventDefault();
+  if (!firebaseReady) { useOfflineModeInternal(); return; }
+  const email = document.getElementById('login-email').value;
+  const password = document.getElementById('login-password').value;
+  const btn = document.getElementById('login-btn');
+  btn.innerHTML = '<div class="spinner"></div>';
+  btn.disabled = true;
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+  } catch(err) {
+    showAuthError('login-error', friendlyAuthError(err.code));
+    btn.innerHTML = 'Sign In'; btn.disabled = false;
+  }
+};
+
+window.handleSignup = async (e) => {
+  e.preventDefault();
+  if (!firebaseReady) { useOfflineModeInternal(); return; }
+  const name = document.getElementById('signup-name').value;
+  const email = document.getElementById('signup-email').value;
+  const password = document.getElementById('signup-password').value;
+  const btn = document.getElementById('signup-btn');
+  btn.innerHTML = '<div class="spinner"></div>'; btn.disabled = true;
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    await updateProfile(cred.user, { displayName: name });
+  } catch(err) {
+    showAuthError('signup-error', friendlyAuthError(err.code));
+    btn.innerHTML = 'Create Account'; btn.disabled = false;
+  }
+};
+
+window.handleGoogleSignIn = async () => {
+  if (!firebaseReady) { useOfflineModeInternal(); return; }
+  try {
+    const provider = new GoogleAuthProvider();
+    await signInWithPopup(auth, provider);
+  } catch(err) { showToast(friendlyAuthError(err.code), 'error'); }
+};
+
+window.handleSignOut = async () => {
+  if (firebaseReady && auth) {
+    await signOut(auth);
+  }
+  currentUser = null;
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('user-menu').style.display = 'none';
+  window.appData = { semester:null, customEvents:{}, trackingName:'', trackingLog:{}, milestones:[], diaryEntries:{}, btechInfo:null };
+};
+
+window.handleForgotPassword = async () => {
+  const email = document.getElementById('login-email').value;
+  if (!email) { showAuthError('login-error', 'Enter your email first'); return; }
+  if (!firebaseReady) { showAuthError('login-error', 'Firebase not configured'); return; }
+  try {
+    await sendPasswordResetEmail(auth, email);
+    showToast('Password reset email sent!', 'success');
+  } catch(err) { showAuthError('login-error', friendlyAuthError(err.code)); }
+};
+
+// ─── AUTH STATE ────────────────────────────────────────
+async function initApp(user) {
+  currentUser = user;
+  await loadAllData();
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').classList.add('visible');
+
+  const name = user ? (user.displayName || user.email) : 'Guest';
+  const initial = name.charAt(0).toUpperCase();
+  document.getElementById('nav-avatar').textContent = initial;
+  document.getElementById('nav-user-name').textContent = user ? name.split(' ')[0] : 'Offline';
+  document.getElementById('user-menu-email').textContent = user ? user.email : 'Local mode';
+
+  // Pre-fill BTech setup
+  if (window.appData.btechInfo) {
+    const b = window.appData.btechInfo;
+    document.getElementById('bt-degree').value = b.degree || '';
+    document.getElementById('bt-college').value = b.college || '';
+    document.getElementById('bt-start').value = b.start || '';
+    document.getElementById('bt-end').value = b.end || '';
+  }
+
+  renderMain();
+  window.renderTrackingPage = renderTrackingPage;
+}
+
+if (firebaseReady) {
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      await initApp(user);
+    } else {
+      document.getElementById('loading-screen').style.display = 'none';
+      document.getElementById('auth-screen').style.display = 'flex';
+    }
+  });
+} else {
+  // No Firebase — show offline option
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('config-notice').classList.add('show');
+}
+
+// Offline/local mode
+function useOfflineModeInternal() {
+  document.getElementById('auth-screen').style.display = 'none';
+  initApp(null);
+}
+window.useOfflineMode = useOfflineModeInternal;
+
+// ─── MAIN PAGE ─────────────────────────────────────────
+function renderMain() {
+  renderBTechBanner();
+  if (!window.appData.semester) {
+    document.getElementById('setup-prompt').style.display = 'block';
+    document.getElementById('main-content').style.display = 'none';
+    return;
+  }
+  document.getElementById('setup-prompt').style.display = 'none';
+  document.getElementById('main-content').style.display = 'block';
+  const sem = window.appData.semester;
+  document.getElementById('sem-title').textContent = sem.name || 'Semester';
+  document.getElementById('sem-dates').textContent = `${fmtDate(sem.start)} → ${fmtDate(sem.end)}`;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const semEnd = new Date(sem.end), semStart = new Date(sem.start);
+  const daysLeft = Math.max(0, Math.ceil((semEnd - today) / 86400000));
+  const totalDays = Math.ceil((semEnd - semStart) / 86400000);
+  const elapsed = Math.ceil((today - semStart) / 86400000);
+  const pct = totalDays > 0 ? Math.min(100, Math.round((elapsed / totalDays) * 100)) : 0;
+  document.getElementById('stat-days-left').textContent = daysLeft;
+  document.getElementById('stat-sem-end-lbl').textContent = `Ends ${fmtDate(sem.end)}`;
+  document.getElementById('stat-sem-pct').textContent = pct + '%';
+  let vacDays = 0;
+  (sem.vacations||[]).forEach(v => {
+    vacDays += Math.ceil((new Date(v.to) - new Date(v.from)) / 86400000) + 1;
+  });
+  document.getElementById('stat-vacation-days').textContent = vacDays;
+  const examEnd = sem.examEnd ? new Date(sem.examEnd) : null;
+  document.getElementById('stat-exam-days').textContent = examEnd ? Math.max(0, Math.ceil((examEnd - today) / 86400000)) : '—';
+
+  // Courses
+  const cl = document.getElementById('courses-list');
+  cl.innerHTML = (sem.courses||[]).length ? sem.courses.map(c =>
+    `<div class="flex items-center gap-1 mt-1">
+      <span style="flex:1;font-size:0.875rem">${c.name}</span>
+      <span class="tag ${c.hasExam==='yes'?'red':'green'}">${c.hasExam==='yes'?'Exam':'No Exam'}</span>
+    </div>`).join('') : '<p class="text-xs text-muted">No courses added</p>';
+
+  // Exams
+  const el = document.getElementById('exams-list');
+  let eHtml = sem.examStart ? `<div class="text-xs mb-1">Period: ${fmtDate(sem.examStart)} → ${fmtDate(sem.examEnd)}</div>` : '';
+  eHtml += (sem.papers||[]).map(p =>
+    `<div class="flex items-center gap-1 mt-1">
+      <span style="flex:1;font-size:0.875rem">${p.name}</span>
+      <span class="tag yellow">${fmtDate(p.date)}</span>
+    </div>`).join('');
+  el.innerHTML = eHtml || '<p class="text-xs text-muted">No exams added</p>';
+
+  // Vacations
+  const vl = document.getElementById('vacations-list');
+  vl.innerHTML = (sem.vacations||[]).length ?
+    `<div class="flex flex-wrap gap-1">${sem.vacations.map(v =>
+      `<span class="tag green">🏖️ ${v.name}: ${fmtDate(v.from)} → ${fmtDate(v.to)}</span>`
+    ).join('')}</div>` : '<p class="text-xs text-muted">No vacations added</p>';
+
+  renderCalendar();
+  renderBTechSetupPreview();
+}
+
+function renderBTechBanner() {
+  const b = window.appData.btechInfo;
+  const banner = document.getElementById('btech-banner');
+  if (!b || !b.start || !b.end) { banner.style.display = 'none'; return; }
+  banner.style.display = 'flex';
+  document.getElementById('btech-label').textContent = (b.degree || 'B.Tech') + (b.college ? ' · ' + b.college : '');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const start = new Date(b.start), end = new Date(b.end);
+  const totalMs = end - start;
+  const elapsedMs = today - start;
+  const remainMs = end - today;
+  const totalDays = Math.ceil(totalMs / 86400000);
+  const daysLeft = Math.max(0, Math.ceil(remainMs / 86400000));
+  const daysElapsed = Math.max(0, Math.ceil(elapsedMs / 86400000));
+  const pct = Math.min(100, Math.round((daysElapsed / totalDays) * 100));
+  const months = Math.floor(daysLeft / 30);
+  const years = (daysLeft / 365).toFixed(1);
+  document.getElementById('btech-years').innerHTML = `
+    <div class="btech-stat"><div class="btech-num text-accent">${daysLeft}</div><div class="btech-lbl">Days Left</div></div>
+    <div class="btech-stat"><div class="btech-num text-yellow">${months}</div><div class="btech-lbl">Months Left</div></div>
+    <div class="btech-stat"><div class="btech-num text-green">${years}</div><div class="btech-lbl">Years Left</div></div>
+    <div class="btech-stat"><div class="btech-num" style="color:var(--accent4)">${daysElapsed}</div><div class="btech-lbl">Days Done</div></div>
+  `;
+  document.getElementById('btech-progress').style.width = pct + '%';
+  document.getElementById('btech-progress-lbl').textContent = `${pct}% complete`;
+}
+
+// ─── CALENDAR ──────────────────────────────────────────
+let calMonth = new Date().getMonth(), calYear = new Date().getFullYear();
+window.prevMonth = () => { calMonth--; if(calMonth<0){calMonth=11;calYear--;} renderCalendar(); };
+window.nextMonth = () => { calMonth++; if(calMonth>11){calMonth=0;calYear++;} renderCalendar(); };
+
+const FESTIVALS = {
+  "2024-03-25":"Holi","2024-04-14":"Baisakhi","2024-04-17":"Ram Navami",
+  "2024-08-26":"Janmashtami","2024-09-07":"Ganesh Chaturthi","2024-10-12":"Dussehra",
+  "2024-11-01":"Diwali","2024-11-15":"Dev Diwali","2024-12-25":"Christmas",
+  "2025-01-14":"Makar Sankranti","2025-01-26":"Republic Day","2025-03-14":"Holi",
+  "2025-04-14":"Baisakhi / Ambedkar Jayanti","2025-04-18":"Good Friday",
+  "2025-08-15":"Independence Day","2025-08-16":"Janmashtami",
+  "2025-08-27":"Ganesh Chaturthi","2025-10-02":"Gandhi Jayanti",
+  "2025-10-02":"Dussehra","2025-10-20":"Diwali","2025-12-25":"Christmas",
+  "2026-01-14":"Makar Sankranti","2026-01-26":"Republic Day",
+  "2026-03-04":"Holi","2026-08-15":"Independence Day","2026-12-25":"Christmas",
+};
+
+function getLunarDay(date) {
+  const refNM = new Date('2024-01-11');
+  const diff = (date - refNM) / 86400000;
+  const lm = 29.53059;
+  const phase = ((diff % lm) + lm) % lm;
+  const t = Math.floor(phase) + 1;
+  const names = ['Pratipada','Dwitiya','Tritiya','Chaturthi','Panchami','Shashthi','Saptami','Ashtami','Navami','Dashami','Ekadashi','Dwadashi','Trayodashi','Chaturdashi'];
+  if (t === 15 || t === 30) return t === 15 ? 'Purnima' : 'Amavasya';
+  const half = t <= 15 ? 'S' : 'K';
+  const n = t <= 15 ? t : t - 15;
+  return half + '-' + (names[n-1] || n);
+}
+
+function renderCalendar() {
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('cal-month-label').textContent = `${MONTHS[calMonth]} ${calYear}`;
+  const sem = window.appData.semester;
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  // Build exam & vacation sets
+  const examSet = new Set(), paperMap = {};
+  if (sem) {
+    if (sem.examStart && sem.examEnd) {
+      let d = new Date(sem.examStart);
+      while (d <= new Date(sem.examEnd)) { examSet.add(d.toISOString().slice(0,10)); d.setDate(d.getDate()+1); }
+    }
+    (sem.papers||[]).forEach(p => { examSet.add(p.date); paperMap[p.date] = p.name; });
+  }
+  const vacMap = {};
+  if (sem) (sem.vacations||[]).forEach(v => {
+    let d = new Date(v.from);
+    while (d <= new Date(v.to)) { vacMap[d.toISOString().slice(0,10)] = v.name; d.setDate(d.getDate()+1); }
+  });
+
+  let html = '<tr>';
+  for (let i=0;i<firstDay;i++) html += '<td><div class="cal-day other-month"></div></td>';
+  for (let d=1; d<=daysInMonth; d++) {
+    const dateObj = new Date(calYear, calMonth, d);
+    const ds = dateObj.toISOString().slice(0,10);
+    const dow = dateObj.getDay();
+    const isToday = dateObj.getTime() === today.getTime();
+    const isWe = dow === 0 || dow === 6;
+    let cls = 'cal-day';
+    if (isToday) cls += ' today';
+    if (examSet.has(ds)) cls += ' exam-day';
+    if (vacMap[ds]) cls += ' vacation';
+    if (isWe) cls += ' weekend';
+    const tithi = getLunarDay(dateObj);
+    const festival = FESTIVALS[ds];
+    const cEvts = (window.appData.customEvents[ds] || []);
+    html += `<td><div class="${cls}" onclick="openEventModal('${ds}')">
+      <div class="day-num"><span>${d}</span><span class="tithi-badge">${tithi}</span></div>
+      <div class="cal-events">`;
+    if (examSet.has(ds)) html += `<div class="cal-event-chip chip-exam">📝 ${paperMap[ds]||'Exam'}</div>`;
+    if (vacMap[ds]) html += `<div class="cal-event-chip chip-vacation">🏖️ ${vacMap[ds]}</div>`;
+    if (festival) html += `<div class="cal-event-chip chip-festival">🎉 ${festival}</div>`;
+    cEvts.forEach(e => html += `<div class="cal-event-chip chip-user">• ${e.name}</div>`);
+    html += `</div></div></td>`;
+    if ((firstDay+d) % 7 === 0) html += '</tr><tr>';
+  }
+  html += '</tr>';
+  document.getElementById('cal-body').innerHTML = html;
+}
+
+// ─── EVENT MODAL ───────────────────────────────────────
+let currentEventDate = '';
+window.openEventModal = (ds) => {
+  currentEventDate = ds;
+  document.getElementById('event-modal-title').textContent = `📅 ${fmtDateLong(ds)}`;
+  document.getElementById('new-event-name').value = '';
+  const evts = window.appData.customEvents[ds] || [];
+  const ex = document.getElementById('event-modal-existing');
+  ex.innerHTML = evts.length ? `<div class="card-title">Events on this day</div>` + evts.map((e,i) =>
+    `<div class="flex items-center gap-1 mb-1">
+      <span style="flex:1;font-size:0.875rem">• ${e.name}</span>
+      <button class="delete-btn" onclick="removeCustomEvent('${ds}',${i})">✕</button>
+    </div>`).join('') : '';
+  document.getElementById('event-modal').classList.add('open');
+};
+window.closeEventModal = () => document.getElementById('event-modal').classList.remove('open');
+window.addCustomEvent = async () => {
+  const name = document.getElementById('new-event-name').value.trim();
+  if (!name) return;
+  if (!window.appData.customEvents[currentEventDate]) window.appData.customEvents[currentEventDate] = [];
+  window.appData.customEvents[currentEventDate].push({name});
+  await saveData('customEvents', window.appData.customEvents);
+  window.closeEventModal();
+  renderCalendar();
+};
+window.removeCustomEvent = async (ds, idx) => {
+  window.appData.customEvents[ds].splice(idx,1);
+  await saveData('customEvents', window.appData.customEvents);
+  window.openEventModal(ds);
+  renderCalendar();
+};
+
+// ─── SETUP WIZARD ──────────────────────────────────────
+window.openSetup = (step=1) => {
+  const s = window.appData.semester;
+  if (s) {
+    document.getElementById('s-sem-name').value = s.name||'';
+    document.getElementById('s-sem-start').value = s.start||'';
+    document.getElementById('s-sem-end').value = s.end||'';
+    document.getElementById('s-exam-start').value = s.examStart||'';
+    document.getElementById('s-exam-end').value = s.examEnd||'';
+    renderSetupCourses(); renderSetupPapers(); renderSetupVacations();
+  }
+  window.wizNext(step);
+  document.getElementById('setup-modal').classList.add('open');
+};
+window.closeSetup = () => document.getElementById('setup-modal').classList.remove('open');
+window.wizNext = (step) => {
+  document.querySelectorAll('.wizard-step').forEach(s => s.classList.remove('active'));
+  document.getElementById('step-'+step).classList.add('active');
+  document.getElementById('wiz-progress').innerHTML = [1,2,3,4].map(i =>
+    `<div class="wiz-dot ${i<step?'done':i===step?'current':''}"></div>`).join('');
+};
+
+window.addCourse = () => {
+  const name = document.getElementById('s-course-input').value.trim();
+  if (!name) return;
+  if (!window.appData.semester) window.appData.semester = {};
+  if (!window.appData.semester.courses) window.appData.semester.courses = [];
+  window.appData.semester.courses.push({name, hasExam: document.getElementById('s-course-exam').value});
+  document.getElementById('s-course-input').value = '';
+  renderSetupCourses();
+};
+function renderSetupCourses() {
+  const c = (window.appData.semester?.courses)||[];
+  document.getElementById('s-courses-list').innerHTML = c.length ? c.map((x,i) =>
+    `<div class="flex items-center gap-1 mb-1">
+      <span style="flex:1;font-size:0.875rem">${x.name}</span>
+      <span class="tag ${x.hasExam==='yes'?'red':'green'}">${x.hasExam==='yes'?'Exam':'No Exam'}</span>
+      <button class="delete-btn" onclick="removeCourse(${i})">✕</button>
+    </div>`).join('') : '<p class="text-xs text-muted">No courses yet</p>';
+}
+window.removeCourse = (i) => { window.appData.semester.courses.splice(i,1); renderSetupCourses(); };
+
+window.addPaper = () => {
+  const name = document.getElementById('s-paper-name').value.trim();
+  const date = document.getElementById('s-paper-date').value;
+  if (!name||!date) return;
+  if (!window.appData.semester) window.appData.semester = {};
+  if (!window.appData.semester.papers) window.appData.semester.papers = [];
+  window.appData.semester.papers.push({name, date});
+  document.getElementById('s-paper-name').value = '';
+  renderSetupPapers();
+};
+function renderSetupPapers() {
+  const p = (window.appData.semester?.papers)||[];
+  document.getElementById('s-papers-list').innerHTML = p.length ? p.map((x,i) =>
+    `<div class="flex items-center gap-1 mb-1">
+      <span style="flex:1;font-size:0.875rem">${x.name}</span>
+      <span class="tag yellow">${fmtDate(x.date)}</span>
+      <button class="delete-btn" onclick="removePaper(${i})">✕</button>
+    </div>`).join('') : '<p class="text-xs text-muted">No papers yet</p>';
+}
+window.removePaper = (i) => { window.appData.semester.papers.splice(i,1); renderSetupPapers(); };
+
+window.addVacation = () => {
+  const name = document.getElementById('s-vac-name').value.trim();
+  const from = document.getElementById('s-vac-from').value;
+  const to = document.getElementById('s-vac-to').value;
+  if (!name||!from||!to) return;
+  if (!window.appData.semester) window.appData.semester = {};
+  if (!window.appData.semester.vacations) window.appData.semester.vacations = [];
+  window.appData.semester.vacations.push({name,from,to});
+  document.getElementById('s-vac-name').value = '';
+  renderSetupVacations();
+};
+function renderSetupVacations() {
+  const v = (window.appData.semester?.vacations)||[];
+  document.getElementById('s-vac-list').innerHTML = v.length ? v.map((x,i) =>
+    `<div class="flex items-center gap-1 mb-1">
+      <span style="flex:1;font-size:0.875rem">${x.name}</span>
+      <span class="tag green">${fmtDate(x.from)} → ${fmtDate(x.to)}</span>
+      <button class="delete-btn" onclick="removeVacation(${i})">✕</button>
+    </div>`).join('') : '<p class="text-xs text-muted">No vacations yet</p>';
+}
+window.removeVacation = (i) => { window.appData.semester.vacations.splice(i,1); renderSetupVacations(); };
+
+window.saveSetup = async () => {
+  if (!window.appData.semester) window.appData.semester = {};
+  window.appData.semester.name = document.getElementById('s-sem-name').value || 'Semester';
+  window.appData.semester.start = document.getElementById('s-sem-start').value;
+  window.appData.semester.end = document.getElementById('s-sem-end').value;
+  window.appData.semester.examStart = document.getElementById('s-exam-start').value;
+  window.appData.semester.examEnd = document.getElementById('s-exam-end').value;
+  await saveData('semester', window.appData.semester);
+  window.closeSetup();
+  renderMain();
+  if (window.appData.semester.start) {
+    const d = new Date(window.appData.semester.start);
+    calMonth = d.getMonth(); calYear = d.getFullYear();
+  }
+  renderCalendar();
+  showToast('Semester saved!', 'success');
+};
+
+// ─── BTECH SETUP ───────────────────────────────────────
+window.saveBTech = async () => {
+  const b = {
+    degree: document.getElementById('bt-degree').value,
+    college: document.getElementById('bt-college').value,
+    start: document.getElementById('bt-start').value,
+    end: document.getElementById('bt-end').value,
+  };
+  await saveData('btechInfo', b);
+  renderBTechBanner();
+  renderBTechSetupPreview();
+  showToast('BTech info saved!', 'success');
+};
+
+function renderBTechSetupPreview() {
+  const b = window.appData.btechInfo;
+  const prev = document.getElementById('btech-preview');
+  if (!b || !b.start || !b.end) { prev.style.display = 'none'; return; }
+  prev.style.display = 'block';
+  const today = new Date(); today.setHours(0,0,0,0);
+  const start = new Date(b.start), end = new Date(b.end);
+  const daysLeft = Math.max(0, Math.ceil((end-today)/86400000));
+  const totalDays = Math.ceil((end-start)/86400000);
+  const pct = Math.min(100, Math.round(((totalDays-daysLeft)/totalDays)*100));
+  document.getElementById('btech-preview-content').innerHTML = `
+    <div class="grid-4">
+      <div class="stat-card"><div class="stat-num text-accent">${daysLeft}</div><div class="stat-label">Days Left</div></div>
+      <div class="stat-card"><div class="stat-num text-yellow">${Math.floor(daysLeft/30)}</div><div class="stat-label">Months Left</div></div>
+      <div class="stat-card"><div class="stat-num text-green">${(daysLeft/365).toFixed(1)}</div><div class="stat-label">Years Left</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:var(--accent4)">${pct}%</div><div class="stat-label">Completed</div></div>
+    </div>`;
+}
+
+// ─── TRACKING ──────────────────────────────────────────
+let trackMonth = new Date().getMonth(), trackYear = new Date().getFullYear();
+window.trackPrevMonth = () => { trackMonth--; if(trackMonth<0){trackMonth=11;trackYear--;} renderTrackGrid(); };
+window.trackNextMonth = () => { trackMonth++; if(trackMonth>11){trackMonth=0;trackYear++;} renderTrackGrid(); };
+
+function renderTrackingPage() {
+  if (window.appData.trackingName) {
+    document.getElementById('tracking-name').value = window.appData.trackingName;
+    document.getElementById('tracking-name-display').style.display = 'inline-flex';
+    document.getElementById('tracking-name-display').textContent = `Tracking: ${window.appData.trackingName}`;
+  }
+  document.getElementById('log-date').value = new Date().toISOString().slice(0,10);
+  renderTrackGrid();
+}
+
+window.setTrackingName = async () => {
+  const name = document.getElementById('tracking-name').value.trim();
+  if (!name) return;
+  await saveData('trackingName', name);
+  document.getElementById('tracking-name-display').style.display = 'inline-flex';
+  document.getElementById('tracking-name-display').textContent = `Tracking: ${name}`;
+  showToast('Tracking name set!', 'success');
+};
+
+function renderTrackGrid() {
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('track-month-label').textContent = `${MONTHS[trackMonth]} ${trackYear}`;
+  const fd = new Date(trackYear, trackMonth, 1).getDay();
+  const dim = new Date(trackYear, trackMonth+1, 0).getDate();
+  const today = new Date(); today.setHours(0,0,0,0);
+  let cells = [];
+  let mTotal=0, mWith=0, mWithout=0;
+  for(let i=0;i<fd;i++) cells.push('<div></div>');
+  for(let d=1;d<=dim;d++) {
+    const dateObj = new Date(trackYear, trackMonth, d);
+    const ds = dateObj.toISOString().slice(0,10);
+    const log = window.appData.trackingLog[ds];
+    const isToday = dateObj.getTime() === today.getTime();
+    let inner = '<span style="color:var(--text3);font-size:0.65rem">—</span>';
+    if (log && log.count > 0) {
+      mTotal += log.count;
+      const cls = log.withIt === 'yes' ? 't-with' : log.withIt === 'mixed' ? 't-mixed' : 't-without';
+      if (log.withIt==='yes') mWith += log.count;
+      else mWithout += log.count;
+      inner = `<span class="${cls}">${log.count}×</span>${log.withIt==='yes'?'<span style="font-size:0.5rem;color:var(--accent)">👁</span>':''}`;
+    }
+    cells.push(`<div class="track-cal-day${isToday?' today':''}" onclick="openTrackLog('${ds}')" title="${log?.note||''}">${'<div class="t-num">'+d+'</div>'}${inner}</div>`);
+  }
+  document.getElementById('track-grid').innerHTML = cells.join('');
+  document.getElementById('track-month-total').textContent = mTotal;
+  document.getElementById('track-month-with').textContent = mWith;
+  document.getElementById('track-month-without').textContent = mWithout;
+}
+
+window.openTrackLog = (ds) => {
+  document.getElementById('log-date').value = ds;
+  const log = window.appData.trackingLog[ds];
+  if (log) {
+    document.getElementById('log-count').value = log.count;
+    document.getElementById('log-with-it').value = log.withIt;
+    document.getElementById('log-note').value = log.note || '';
+  } else {
+    document.getElementById('log-count').value = 1;
+    document.getElementById('log-with-it').value = 'no';
+    document.getElementById('log-note').value = '';
+  }
+};
+
+window.saveTrackLog = async () => {
+  const date = document.getElementById('log-date').value;
+  const count = parseInt(document.getElementById('log-count').value)||0;
+  const withIt = document.getElementById('log-with-it').value;
+  const note = document.getElementById('log-note').value.trim();
+  if (!date) return;
+  window.appData.trackingLog[date] = {count, withIt, note};
+  await saveData('trackingLog', window.appData.trackingLog);
+  renderTrackGrid();
+  showToast('Entry saved!', 'success');
+};
+
+// ─── DIARY ─────────────────────────────────────────────
+let diaryMonth = new Date().getMonth(), diaryYear = new Date().getFullYear();
+let diarySelectedDate = null;
+const MOODS = ['😢','😟','😐','🙂','😊','😄'];
+let currentMoodIdx = 2;
+
+window.diaryPrevMonth = () => { diaryMonth--; if(diaryMonth<0){diaryMonth=11;diaryYear--;} renderDiaryGrid(); };
+window.diaryNextMonth = () => { diaryMonth++; if(diaryMonth>11){diaryMonth=0;diaryYear++;} renderDiaryGrid(); };
+window.cycleMood = () => {
+  currentMoodIdx = (currentMoodIdx+1) % MOODS.length;
+  document.getElementById('diary-mood-emoji').textContent = MOODS[currentMoodIdx];
+  if (diarySelectedDate) updateDiaryField('mood', currentMoodIdx);
+};
+
+function renderDiaryGrid() {
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('diary-month-label').textContent = `${MONTHS[diaryMonth]} ${diaryYear}`;
+  const fd = new Date(diaryYear, diaryMonth, 1).getDay();
+  const dim = new Date(diaryYear, diaryMonth+1, 0).getDate();
+  const today = new Date(); today.setHours(0,0,0,0);
+  let cells = [];
+  for(let i=0;i<fd;i++) cells.push('<div></div>');
+  for(let d=1;d<=dim;d++) {
+    const dateObj = new Date(diaryYear, diaryMonth, d);
+    const ds = dateObj.toISOString().slice(0,10);
+    const entry = window.appData.diaryEntries[ds];
+    const isToday = dateObj.getTime() === today.getTime();
+    const isSel = ds === diarySelectedDate;
+    let pctHtml = '', pctColor = 'var(--text3)';
+    if (entry) {
+      const sc = calcScore(entry);
+      pctColor = sc>=70 ? 'var(--accent3)' : sc>=40 ? 'var(--accent2)' : 'var(--accent)';
+      const mood = entry.mood !== undefined ? MOODS[entry.mood] : '';
+      pctHtml = `<div class="d-pct" style="color:${pctColor}">${sc}%${mood}</div>`;
+    } else if (isToday) {
+      pctHtml = '<div class="d-pct" style="color:var(--text3)">·</div>';
+    }
+    cells.push(`<div class="diary-cal-day${isToday?' today':''}${isSel?' selected':''}" onclick="openDiaryDay('${ds}')">
+      <div class="d-num">${d}</div>${pctHtml}
+    </div>`);
+  }
+  document.getElementById('diary-grid').innerHTML = cells.join('');
+}
+
+function calcScore(entry) {
+  const rated = window.appData.milestones.filter(m => m.counted==='yes');
+  if (!rated.length) return 0;
+  let done = 0;
+  rated.forEach(m => {
+    const v = entry.milestones?.[m.id];
+    if (m.type==='digital' && v===true) done++;
+    else if (m.type==='analog' && v && parseFloat(v)>0) done++;
+  });
+  return Math.round((done/rated.length)*100);
+}
+
+window.openDiaryDay = (ds) => {
+  diarySelectedDate = ds;
+  renderDiaryGrid();
+  const entry = window.appData.diaryEntries[ds] || {milestones:{}, expenses:[], journal:'', mood:2};
+  const d = new Date(ds+'T00:00:00');
+  document.getElementById('diary-entry-date').textContent = d.toLocaleDateString('en-IN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  currentMoodIdx = entry.mood !== undefined ? entry.mood : 2;
+  document.getElementById('diary-mood-emoji').textContent = MOODS[currentMoodIdx];
+  renderDiaryMilestones(entry);
+  renderDiaryExpenses(entry);
+  document.getElementById('diary-journal').value = entry.journal || '';
+  updateDiaryScore(entry);
+  document.getElementById('diary-entry-section').style.display = 'block';
+  document.getElementById('diary-entry-section').scrollIntoView({behavior:'smooth',block:'start'});
+};
+window.closeDiaryEntry = () => { document.getElementById('diary-entry-section').style.display='none'; diarySelectedDate=null; renderDiaryGrid(); };
+
+function renderDiaryMilestones(entry) {
+  const c = document.getElementById('diary-milestones-list');
+  const ms = window.appData.milestones;
+  if (!ms.length) { document.getElementById('diary-no-milestones').style.display='block'; c.innerHTML=''; return; }
+  document.getElementById('diary-no-milestones').style.display='none';
+  c.innerHTML = ms.map(m => {
+    const v = entry.milestones?.[m.id];
+    let inp = m.type==='digital'
+      ? `<input type="checkbox" ${v?'checked':''} onchange="updateMilestoneVal('${m.id}',this.checked)">`
+      : `<input type="number" class="input" style="width:80px;padding:0.3rem 0.5rem" placeholder="0" value="${v||''}" oninput="updateMilestoneVal('${m.id}',this.value)">`;
+    return `<div class="milestone-item">${inp}<span class="m-name">${m.name}</span>
+      <span class="m-badge">${m.type==='digital'?'☑':'∿'}${m.counted==='yes'?' · scored':''}</span>
+    </div>`;
+  }).join('');
+}
+
+window.updateMilestoneVal = async (id, val) => {
+  if (!diarySelectedDate) return;
+  if (!window.appData.diaryEntries[diarySelectedDate]) window.appData.diaryEntries[diarySelectedDate] = {milestones:{},expenses:[],journal:'',mood:2};
+  window.appData.diaryEntries[diarySelectedDate].milestones[id] = val;
+  await saveData('diaryEntries', window.appData.diaryEntries);
+  updateDiaryScore(window.appData.diaryEntries[diarySelectedDate]);
+  renderDiaryGrid();
+};
+
+async function updateDiaryField(field, val) {
+  if (!diarySelectedDate) return;
+  if (!window.appData.diaryEntries[diarySelectedDate]) window.appData.diaryEntries[diarySelectedDate] = {milestones:{},expenses:[],journal:'',mood:2};
+  window.appData.diaryEntries[diarySelectedDate][field] = val;
+  await saveData('diaryEntries', window.appData.diaryEntries);
+  renderDiaryGrid();
+}
+
+function updateDiaryScore(entry) {
+  const sc = calcScore(entry);
+  document.getElementById('diary-score-display').textContent = sc+'%';
+  const bar = document.getElementById('diary-progress-bar');
+  bar.style.width = sc+'%';
+  bar.style.background = sc>=70 ? 'var(--accent3)' : sc>=40 ? 'var(--accent2)' : 'var(--accent)';
+}
+
+function renderDiaryExpenses(entry) {
+  const exps = entry.expenses || [];
+  document.getElementById('expenses-container').innerHTML = exps.map((e,i) =>
+    `<div class="expense-row">
+      <input type="text" class="input" value="${e.desc||''}" placeholder="What for..." oninput="updateExpense(${i},'desc',this.value)" style="flex:2">
+      <input type="number" class="input" value="${e.amt||''}" placeholder="₹" oninput="updateExpense(${i},'amt',this.value)" style="flex:1;min-width:80px">
+      <button class="delete-btn" onclick="removeExpense(${i})">✕</button>
+    </div>`).join('');
+  updateExpenseTotal();
+}
+
+window.addExpenseRow = () => {
+  if (!diarySelectedDate) return;
+  if (!window.appData.diaryEntries[diarySelectedDate]) window.appData.diaryEntries[diarySelectedDate] = {milestones:{},expenses:[],journal:'',mood:2};
+  window.appData.diaryEntries[diarySelectedDate].expenses.push({desc:'',amt:''});
+  renderDiaryExpenses(window.appData.diaryEntries[diarySelectedDate]);
+};
+window.updateExpense = (idx, field, val) => {
+  if (!diarySelectedDate||!window.appData.diaryEntries[diarySelectedDate]) return;
+  window.appData.diaryEntries[diarySelectedDate].expenses[idx][field] = val;
+  updateExpenseTotal();
+};
+window.removeExpense = async (idx) => {
+  if (!diarySelectedDate||!window.appData.diaryEntries[diarySelectedDate]) return;
+  window.appData.diaryEntries[diarySelectedDate].expenses.splice(idx,1);
+  await saveData('diaryEntries', window.appData.diaryEntries);
+  renderDiaryExpenses(window.appData.diaryEntries[diarySelectedDate]);
+};
+function updateExpenseTotal() {
+  if (!diarySelectedDate||!window.appData.diaryEntries[diarySelectedDate]) { document.getElementById('expense-total').textContent='0'; return; }
+  const t = (window.appData.diaryEntries[diarySelectedDate].expenses||[]).reduce((s,e)=>s+(parseFloat(e.amt)||0),0);
+  document.getElementById('expense-total').textContent = t.toFixed(0);
+}
+
+window.saveDiaryEntry = async () => {
+  if (!diarySelectedDate) return;
+  if (!window.appData.diaryEntries[diarySelectedDate]) window.appData.diaryEntries[diarySelectedDate] = {milestones:{},expenses:[],journal:'',mood:2};
+  window.appData.diaryEntries[diarySelectedDate].journal = document.getElementById('diary-journal').value;
+  window.appData.diaryEntries[diarySelectedDate].mood = currentMoodIdx;
+  await saveData('diaryEntries', window.appData.diaryEntries);
+  renderDiaryGrid();
+  showToast('Entry saved!', 'success');
+};
+
+// ─── MILESTONES ────────────────────────────────────────
+window.openMilestoneEditor = () => { renderMilestoneList(); document.getElementById('milestone-modal').classList.add('open'); };
+window.closeMilestoneModal = () => {
+  document.getElementById('milestone-modal').classList.remove('open');
+  if (diarySelectedDate) {
+    const entry = window.appData.diaryEntries[diarySelectedDate] || {milestones:{},expenses:[],journal:'',mood:2};
+    renderDiaryMilestones(entry);
+  }
+};
+window.addMilestone = async () => {
+  const name = document.getElementById('new-ms-name').value.trim();
+  if (!name) return;
+  window.appData.milestones.push({
+    id: 'ms_'+Date.now(),
+    name,
+    type: document.getElementById('new-ms-type').value,
+    counted: document.getElementById('new-ms-rated').value,
+  });
+  document.getElementById('new-ms-name').value = '';
+  await saveData('milestones', window.appData.milestones);
+  renderMilestoneList();
+};
+function renderMilestoneList() {
+  document.getElementById('ms-list').innerHTML = window.appData.milestones.length ?
+    window.appData.milestones.map((m,i) =>
+      `<div class="milestone-item">
+        <span class="m-name">${m.name}</span>
+        <span class="tag ${m.type==='digital'?'blue':'yellow'}">${m.type}</span>
+        <span class="tag ${m.counted==='yes'?'green':''}">${m.counted==='yes'?'scored':'unscored'}</span>
+        <button class="delete-btn" onclick="removeMilestone(${i})">✕</button>
+      </div>`).join('')
+    : '<p class="text-xs text-muted">No milestones yet</p>';
+}
+window.removeMilestone = async (i) => { window.appData.milestones.splice(i,1); await saveData('milestones', window.appData.milestones); renderMilestoneList(); };
+
+// ─── INSIGHTS ──────────────────────────────────────────
+function renderInsights() {
+  const entries = window.appData.diaryEntries;
+  const dates = Object.keys(entries).sort();
+  document.getElementById('ins-total-entries').textContent = dates.length;
+
+  // Streak
+  let streak = 0;
+  const today = new Date(); today.setHours(0,0,0,0);
+  let check = new Date(today);
+  while (true) {
+    const ds = check.toISOString().slice(0,10);
+    if (entries[ds]) { streak++; check.setDate(check.getDate()-1); }
+    else break;
+  }
+  document.getElementById('ins-streak').textContent = streak + ' day' + (streak!==1?'s':'');
+
+  // Total expenses
+  let totalExp = 0;
+  dates.forEach(ds => { (entries[ds].expenses||[]).forEach(e => totalExp += parseFloat(e.amt)||0); });
+  document.getElementById('ins-total-expense').textContent = '₹' + totalExp.toFixed(0);
+
+  // Avg score last 30
+  const last30 = [];
+  for (let i=0;i<30;i++) {
+    const d = new Date(today); d.setDate(d.getDate()-i);
+    const ds = d.toISOString().slice(0,10);
+    if (entries[ds]) last30.push(calcScore(entries[ds]));
+  }
+  const avg = last30.length ? Math.round(last30.reduce((a,b)=>a+b,0)/last30.length) : 0;
+  document.getElementById('ins-avg-score').textContent = avg + '%';
+
+  // Tracking stats
+  const log = window.appData.trackingLog;
+  let tTotal = 0, tClean = 0;
+  Object.values(log).forEach(l => { tTotal += l.count||0; if(l.withIt==='no') tClean++; });
+  document.getElementById('ins-track-total').textContent = tTotal;
+  document.getElementById('ins-track-clean').textContent = tClean + ' days';
+
+  // Bar chart (last 30 days)
+  const bars = document.getElementById('ins-bar-chart');
+  bars.innerHTML = '';
+  for (let i=29;i>=0;i--) {
+    const d = new Date(today); d.setDate(d.getDate()-i);
+    const ds = d.toISOString().slice(0,10);
+    const sc = entries[ds] ? calcScore(entries[ds]) : 0;
+    const color = sc>=70?'var(--accent3)':sc>=40?'var(--accent2)':'var(--border2)';
+    bars.innerHTML += `<div style="flex:1;background:${color};height:${Math.max(4,sc)}%;border-radius:2px 2px 0 0;transition:height 0.3s" title="${ds}: ${sc}%"></div>`;
+  }
+
+  // Mood chart
+  const moodCounts = [0,0,0,0,0,0];
+  for (let i=0;i<30;i++) {
+    const d = new Date(today); d.setDate(d.getDate()-i);
+    const ds = d.toISOString().slice(0,10);
+    if (entries[ds] && entries[ds].mood !== undefined) moodCounts[entries[ds].mood]++;
+  }
+  const moodEl = document.getElementById('ins-mood-chart');
+  moodEl.innerHTML = MOODS.map((m,i) =>
+    `<div style="text-align:center">
+      <div style="font-size:1.5rem">${m}</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:0.85rem;margin-top:2px">${moodCounts[i]}</div>
+      <div style="font-size:0.65rem;color:var(--text3)">days</div>
+    </div>`).join('');
+}
+
+// ─── NAVIGATION ────────────────────────────────────────
+window.showPage = (p) => {
+  document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  const pages = ['main','tracking','diary','insights','btech-setup'];
+  const btns = document.querySelectorAll('.nav-btn');
+  const mainPages = ['main','tracking','diary','insights'];
+  const idx = mainPages.indexOf(p);
+  if (idx >= 0 && btns[idx]) btns[idx].classList.add('active');
+  document.getElementById('user-menu').style.display = 'none';
+  if (p==='tracking') renderTrackingPage();
+  if (p==='diary') renderDiaryGrid();
+  if (p==='insights') renderInsights();
+  if (p==='main') renderMain();
+  if (p==='btech-setup') renderBTechSetupPreview();
+};
+
+window.toggleUserMenu = () => {
+  const m = document.getElementById('user-menu');
+  m.style.display = m.style.display === 'none' ? 'block' : 'none';
+};
+
+// Close user menu on outside click
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('user-menu');
+  const avatar = document.getElementById('nav-avatar');
+  if (!menu.contains(e.target) && e.target !== avatar) menu.style.display='none';
+});
+
+// ─── AUTH TAB SWITCH ───────────────────────────────────
+window.switchAuthTab = (tab) => {
+  document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active', (i===0&&tab==='login')||(i===1&&tab==='signup')));
+  document.getElementById('login-form').classList.toggle('active', tab==='login');
+  document.getElementById('signup-form').classList.toggle('active', tab==='signup');
+};
+
+// ─── UTILITIES ─────────────────────────────────────────
+function fmtDate(ds) {
+  if (!ds) return '—';
+  const d = new Date(ds+'T00:00:00');
+  return d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+}
+function fmtDateLong(ds) {
+  const d = new Date(ds+'T00:00:00');
+  return d.toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+}
+window.fmtDate = fmtDate;
+window.fmtDateLong = fmtDateLong;
+
+function showAuthError(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 4000);
+}
+function friendlyAuthError(code) {
+  const map = {
+    'auth/user-not-found':'No account found with this email',
+    'auth/wrong-password':'Incorrect password',
+    'auth/email-already-in-use':'This email is already registered',
+    'auth/weak-password':'Password must be at least 6 characters',
+    'auth/invalid-email':'Please enter a valid email address',
+    'auth/popup-closed-by-user':'Sign-in cancelled',
+    'auth/network-request-failed':'Network error. Check your connection',
+    'auth/invalid-credential':'Invalid email or password',
+  };
+  return map[code] || 'Something went wrong. Try again.';
+}
+
+let toastTimer;
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = (type==='success'?'✓ ':'✕ ') + msg;
+  t.className = 'show '+type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className='', 2500);
+}
+window.showToast = showToast;
+
+// Init log-date default
+document.getElementById('log-date').value = new Date().toISOString().slice(0,10);
+
+</script>
+</body>
+</html>
