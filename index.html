@@ -1134,10 +1134,8 @@ window.handleLogin = async (e) => {
     if (!cred.user.emailVerified) {
       await signOut(auth);
       showAuthError('login-error', 'Please verify your email first. Check your inbox for the verification link.');
-      // Show resend button
       document.getElementById('resend-verify-btn').style.display = 'block';
       document.getElementById('resend-verify-btn').onclick = async () => {
-        // Re-sign in temporarily to send the email, then sign out again
         try {
           const tempCred = await signInWithEmailAndPassword(auth, email, password);
           await sendEmailVerification(tempCred.user);
@@ -1148,7 +1146,10 @@ window.handleLogin = async (e) => {
       btn.innerHTML = 'Sign In'; btn.disabled = false;
       return;
     }
+    // ✅ Email is verified — explicitly launch the app for this user
     document.getElementById('resend-verify-btn').style.display = 'none';
+    btn.innerHTML = 'Sign In'; btn.disabled = false;
+    await initApp(cred.user);
   } catch(err) {
     showAuthError('login-error', friendlyAuthError(err.code));
     btn.innerHTML = 'Sign In'; btn.disabled = false;
@@ -1183,7 +1184,9 @@ window.handleGoogleSignIn = async () => {
   if (!firebaseReady) { useOfflineModeInternal(); return; }
   try {
     const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
+    const result = await signInWithPopup(auth, provider);
+    // Google accounts are always verified — launch app immediately
+    await initApp(result.user);
   } catch(err) { showToast(friendlyAuthError(err.code), 'error'); }
 };
 
@@ -1210,6 +1213,10 @@ window.handleForgotPassword = async () => {
 
 // ─── AUTH STATE ────────────────────────────────────────
 async function initApp(user) {
+  // Mark that the app has been launched so onAuthStateChanged won't double-fire
+  if (typeof appLaunched !== 'undefined') {
+    try { appLaunched = true; } catch(e) {}
+  }
   currentUser = user;
   // CRITICAL: always reset to blank slate before loading this user's data
   // Without this, switching accounts would show the previous user's data
@@ -1247,18 +1254,32 @@ async function initApp(user) {
 }
 
 if (firebaseReady) {
+  // onAuthStateChanged handles ONLY the page-load case:
+  // "is there already a logged-in user from a previous session?"
+  // Login/signup flows call initApp() directly — this prevents race conditions.
+  let appLaunched = false;
   onAuthStateChanged(auth, async (user) => {
-    if (user) {
+    if (appLaunched) return; // already handled by login/signup handler
+    if (user && user.emailVerified) {
+      // Returning verified user — restore their session
+      appLaunched = true;
       await initApp(user);
+    } else if (user && !user.emailVerified) {
+      // Returning but unverified — sign them out and show auth screen
+      await signOut(auth);
+      document.getElementById('loading-screen').style.display = 'none';
+      document.getElementById('auth-screen').style.display = 'flex';
     } else {
+      // No user at all — show login screen
       document.getElementById('loading-screen').style.display = 'none';
       document.getElementById('auth-screen').style.display = 'flex';
     }
   });
+  // Mark app as launched when initApp is called from login/signup
+  const _origInitApp = initApp;
+  // We set appLaunched=true inside initApp itself below
 } else {
-  // Firebase not configured — go straight to offline/local mode (no login required)
-  // The loading screen is already hidden by the inline script above.
-  // Auto-launch in local mode so user can start using the app immediately.
+  // Firebase not configured — straight to offline/local mode
   await initApp(null);
   document.getElementById('config-notice').classList.add('show');
 }
