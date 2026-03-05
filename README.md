@@ -53,4 +53,4 @@ That's it — you're set up. Everything saves to the cloud automatically.
 ---
 
 *Built with HTML, Firebase & GitHub Pages — completely free to host.*  
-*Made with ❤️ for students who want to take their life seriously.*
+*Made with ❤️ in India for any student who want to take their life seriously.*
