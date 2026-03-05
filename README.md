@@ -2,7 +2,7 @@
 
 A personal tracker for students. Log your semester, habits, diary, and expenses — all synced to the cloud.
 
-**🌐 Live:** [your-username.github.io/mylife](https://Nisarg-Vyas.github.io/mylife)  
+**🌐 Live:** [Nisarg-Vyas.github.io/mylife](https://Nisarg-Vyas.github.io/mylife)  
 **📖 Full Guide:** [Read the detailed guide →](./GUIDE.md)
 
 ---
@@ -52,5 +52,5 @@ That's it — you're set up. Everything saves to the cloud automatically.
 
 ---
 
-*Built with HTML, Firebase & GitHub Pages — completely free to host.*
+*Built with HTML, Firebase & GitHub Pages — completely free to host.*  
 *Made with ❤️ for students who want to take their life seriously.*
