@@ -1195,15 +1195,29 @@ body.printing #print-container { display: block !important; }
   <div class="modal">
     <button class="modal-close" onclick="closeMilestoneModal()">✕</button>
     <div class="modal-title">⚙️ Manage Milestones</div>
-    <div style="display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap">
-      <input type="text" class="input" id="new-ms-name" placeholder="e.g. Exercise, Study 2hrs..." style="flex:1;min-width:130px">
+    <div style="display:flex;gap:0.5rem;margin-bottom:0.6rem;flex-wrap:wrap">
+      <input type="text" class="input" id="new-ms-name" placeholder="e.g. Woke up, Exercise..." style="flex:1;min-width:130px">
       <select class="input" id="new-ms-type" style="width:auto">
-        <option value="digital">Digital (✓/✗)</option><option value="analog">Analogue (number)</option>
+        <option value="digital">Digital (✓/✗)</option>
+        <option value="analog">Analogue (number)</option>
       </select>
       <select class="input" id="new-ms-rated" style="width:auto">
-        <option value="yes">Counts for score</option><option value="no">Doesn't count</option>
+        <option value="yes">Counts for score</option>
+        <option value="no">Doesn't count</option>
       </select>
       <button class="btn btn-primary btn-sm" onclick="addMilestone()">Add</button>
+    </div>
+    <!-- Optional note field config — shown when note type is not "none" -->
+    <div style="display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center">
+      <span style="font-size:0.78rem;color:var(--text3);white-space:nowrap">+ Extra note:</span>
+      <select class="input" id="new-ms-note-type" style="width:auto" onchange="window.toggleMsNoteLabel()">
+        <option value="none">None (no extra field)</option>
+        <option value="time">Time — e.g. 6:30 AM</option>
+        <option value="duration">Duration — e.g. 45 min</option>
+        <option value="number">Number — e.g. 3.2 km</option>
+        <option value="text">Free text — any note</option>
+      </select>
+      <input type="text" class="input" id="new-ms-note-label" placeholder="Field label, e.g. 'Woke at'" style="flex:1;min-width:110px;display:none">
     </div>
     <div id="ms-list" style="max-height:300px;overflow-y:auto"></div>
     <button class="btn btn-success" style="margin-top:1rem" onclick="closeMilestoneModal()">Done</button>
@@ -1397,7 +1411,7 @@ function updateExportCount() {
   const diaryDays = dates.filter(ds => {
     const e = window.appData.diaryEntries[ds];
     return e && (e.journal?.trim() || e.expenses?.some(x=>x.amt) ||
-      Object.values(e.milestones||{}).some(v => v===true || (v && parseFloat(v)>0)));
+      Object.values(e.milestones||{}).some(raw => { const v = raw && typeof raw==='object' ? raw.v : raw; return v===true||v==='true'||(v&&parseFloat(v)>0); }));
   }).length;
   const habitDays = dates.filter(ds => window.appData.trackingLog[ds]?.count > 0).length;
   document.getElementById('export-entry-count').textContent =
@@ -1424,7 +1438,7 @@ window.exportDiary = () => {
   const activeDates = dates.filter(ds => {
     const e = entries[ds];
     return e && (e.journal?.trim() || e.expenses?.some(x=>x.amt) ||
-      Object.values(e.milestones||{}).some(v => v===true || (v && parseFloat(v)>0)));
+      Object.values(e.milestones||{}).some(raw => { const v = raw && typeof raw==='object' ? raw.v : raw; return v===true||v==='true'||(v&&parseFloat(v)>0); }));
   });
 
   if (!activeDates.length) {
@@ -1481,18 +1495,30 @@ window.exportDiary = () => {
     if (milestones.length && msKeys.length) {
       html += `<div class="pr-section-label">Milestones</div>`;
       milestones.forEach(m => {
-        const v = entry.milestones?.[m.id];
+        const raw = entry.milestones?.[m.id];
+        const v    = raw && typeof raw === 'object' ? raw.v    : raw;
+        const note = raw && typeof raw === 'object' ? raw.note : '';
         let done = false, valLabel = '';
         if (m.type === 'digital') {
-          done = v === true;
+          done = v === true || v === 'true';
           valLabel = done ? 'Done' : 'Not done';
         } else {
           done = v && parseFloat(v) > 0;
-          valLabel = done ? `${v} ${m.unit||''}`.trim() : 'Not logged';
+          valLabel = done ? `${v}` : 'Not logged';
         }
+        // Format time note nicely for export
+        let noteDisplay = note || '';
+        if (note && m.noteType === 'time' && note.includes('|')) {
+          const [t, ap] = note.split('|');
+          const [hh, mm] = t.split(':');
+          noteDisplay = `${hh}:${mm} ${ap}`;
+        }
+        const noteStr = noteDisplay
+          ? ` <span style="color:#777;font-size:0.78rem">(${m.noteLabel||m.noteType}: ${noteDisplay})</span>`
+          : '';
         html += `<div class="pr-ms-row">
           <div class="pr-ms-dot ${done ? 'pr-ms-done' : 'pr-ms-skip'}"></div>
-          <span style="flex:1">${m.name}</span>
+          <span style="flex:1">${m.name}${noteStr}</span>
           <span style="color:${done ? '#27ae60' : '#aaa'};font-size:0.8rem">${valLabel}</span>
         </div>`;
       });
@@ -2308,7 +2334,7 @@ function renderDiaryGrid() {
     if (entry) {
       const hasContent = (entry.journal && entry.journal.trim().length > 0) ||
         (entry.expenses && entry.expenses.some(x => x.amt)) ||
-        (entry.milestones && Object.values(entry.milestones).some(v => v === true || (v && parseFloat(v) > 0)));
+        (entry.milestones && Object.values(entry.milestones).some(raw => { const v = raw && typeof raw==='object' ? raw.v : raw; return v===true||v==='true'||(v&&parseFloat(v)>0); }));
       const sc = calcScore(entry);
       pctColor = sc>=70 ? 'var(--accent3)' : sc>=40 ? 'var(--accent2)' : 'var(--accent)';
       const mood = entry.mood !== undefined ? MOODS[entry.mood] : '';
@@ -2330,8 +2356,9 @@ function calcScore(entry) {
   if (!rated.length) return 0;
   let done = 0;
   rated.forEach(m => {
-    const v = entry.milestones?.[m.id];
-    if (m.type==='digital' && v===true) done++;
+    const raw = entry.milestones?.[m.id];
+    const v = raw && typeof raw === 'object' ? raw.v : raw;
+    if (m.type==='digital' && (v===true || v==='true')) done++;
     else if (m.type==='analog' && v && parseFloat(v)>0) done++;
   });
   return Math.round((done/rated.length)*100);
@@ -2360,24 +2387,111 @@ function renderDiaryMilestones(entry) {
   if (!ms.length) { document.getElementById('diary-no-milestones').style.display='block'; c.innerHTML=''; return; }
   document.getElementById('diary-no-milestones').style.display='none';
   c.innerHTML = ms.map(m => {
-    const v = entry.milestones?.[m.id];
-    let inp = m.type==='digital'
-      ? `<input type="checkbox" ${v?'checked':''} onchange="updateMilestoneVal('${m.id}',this.checked)">`
-      : `<input type="number" class="input" style="width:80px;padding:0.3rem 0.5rem" placeholder="0" value="${v||''}" oninput="updateMilestoneVal('${m.id}',this.value)">`;
-    return `<div class="milestone-item">${inp}<span class="m-name">${m.name}</span>
+    // stored value: primitive for old milestones, {v, note} for milestones with noteType
+    const stored  = entry.milestones?.[m.id];
+    const mainVal = stored && typeof stored === 'object' ? stored.v    : stored;
+    const noteVal = stored && typeof stored === 'object' ? stored.note : '';
+
+    // Primary input
+    let inp = m.type === 'digital'
+      ? `<input type="checkbox" ${mainVal ? 'checked' : ''} onchange="window.updateMsMain('${m.id}', this.checked)">`
+      : `<input type="number" class="input" style="width:72px;padding:0.25rem 0.4rem;font-size:0.85rem" placeholder="0" value="${mainVal||''}" oninput="window.updateMsMain('${m.id}', this.value)">`;
+
+    // Note input — only if milestone has a noteType set
+    let noteHtml = '';
+    if (m.noteType && m.noteType !== 'none') {
+      const lbl = m.noteLabel || m.noteType;
+      let noteInp = '';
+      if (m.noteType === 'time') {
+        // Two fields: native time picker + 12-hr display
+        const timeVal = noteVal ? noteVal.split('|')[0] : '';   // "HH:MM" for picker
+        const ampmVal = noteVal ? (noteVal.split('|')[1] || '') : ''; // "AM"/"PM"
+        noteInp = `<input type="time" id="ms-note-${m.id}" class="input"
+            style="width:110px;padding:0.25rem 0.4rem;font-size:0.82rem"
+            value="${timeVal}"
+            oninput="window.updateMsNote('${m.id}')">
+          <select id="ms-ampm-${m.id}" class="input"
+            style="width:68px;padding:0.25rem 0.3rem;font-size:0.82rem"
+            onchange="window.updateMsNote('${m.id}')">
+            <option value="" ${!ampmVal?'selected':''}>—</option>
+            <option value="AM" ${ampmVal==='AM'?'selected':''}>AM</option>
+            <option value="PM" ${ampmVal==='PM'?'selected':''}>PM</option>
+          </select>`;
+      } else if (m.noteType === 'duration') {
+        noteInp = `<input type="text" id="ms-note-${m.id}" class="input"
+            style="width:110px;padding:0.25rem 0.4rem;font-size:0.82rem"
+            placeholder="e.g. 45 min / 1h 20m"
+            value="${noteVal||''}"
+            oninput="window.updateMsNote('${m.id}')">`;
+      } else if (m.noteType === 'number') {
+        noteInp = `<input type="number" id="ms-note-${m.id}" class="input"
+            style="width:90px;padding:0.25rem 0.4rem;font-size:0.82rem"
+            placeholder="0"
+            value="${noteVal||''}"
+            oninput="window.updateMsNote('${m.id}')">`;
+      } else { // text
+        noteInp = `<input type="text" id="ms-note-${m.id}" class="input"
+            style="width:130px;padding:0.25rem 0.4rem;font-size:0.82rem"
+            placeholder="Note…"
+            value="${noteVal||''}"
+            oninput="window.updateMsNote('${m.id}')">`;
+      }
+      noteHtml = `<span style="font-size:0.73rem;color:var(--text3);margin-left:0.25rem">${lbl}:</span>
+        ${noteInp}`;
+    }
+
+    return `<div class="milestone-item" style="flex-wrap:wrap;gap:0.4rem 0.5rem;padding:0.45rem 0">
+      ${inp}
+      <span class="m-name" style="flex:1;min-width:80px">${m.name}</span>
+      ${noteHtml}
       <span class="m-badge">${m.type==='digital'?'☑':'∿'}${m.counted==='yes'?' · scored':''}</span>
     </div>`;
   }).join('');
 }
 
-window.updateMilestoneVal = async (id, val) => {
+// Save primary milestone value (checkbox or number)
+window.updateMsMain = async (id, val) => {
   if (!diarySelectedDate) return;
-  if (!window.appData.diaryEntries[diarySelectedDate]) window.appData.diaryEntries[diarySelectedDate] = {milestones:{},expenses:[],journal:'',mood:2};
-  window.appData.diaryEntries[diarySelectedDate].milestones[id] = val;
-  await saveData('diaryEntries', window.appData.diaryEntries);
-  updateDiaryScore(window.appData.diaryEntries[diarySelectedDate]);
+  const entries = window.appData.diaryEntries;
+  if (!entries[diarySelectedDate])
+    entries[diarySelectedDate] = {milestones:{}, expenses:[], journal:'', mood:2};
+  const ms = window.appData.milestones.find(m => m.id === id);
+  if (ms && ms.noteType && ms.noteType !== 'none') {
+    const prev = entries[diarySelectedDate].milestones[id];
+    const prevNote = prev && typeof prev === 'object' ? prev.note : '';
+    entries[diarySelectedDate].milestones[id] = { v: val, note: prevNote };
+  } else {
+    entries[diarySelectedDate].milestones[id] = val;
+  }
+  await saveData('diaryEntries', entries);
+  updateDiaryScore(entries[diarySelectedDate]);
   renderDiaryGrid();
 };
+
+// Save note field (time, duration, number, text)
+window.updateMsNote = async (id) => {
+  if (!diarySelectedDate) return;
+  const entries = window.appData.diaryEntries;
+  if (!entries[diarySelectedDate])
+    entries[diarySelectedDate] = {milestones:{}, expenses:[], journal:'', mood:2};
+  const ms = window.appData.milestones.find(m => m.id === id);
+  if (!ms) return;
+  let noteVal = '';
+  if (ms.noteType === 'time') {
+    const t  = document.getElementById('ms-note-' + id)?.value || '';
+    const ap = document.getElementById('ms-ampm-' + id)?.value || '';
+    noteVal = t ? (t + (ap ? '|' + ap : '')) : '';
+  } else {
+    noteVal = document.getElementById('ms-note-' + id)?.value || '';
+  }
+  const prev  = entries[diarySelectedDate].milestones[id];
+  const prevV = prev && typeof prev === 'object' ? prev.v : (prev || false);
+  entries[diarySelectedDate].milestones[id] = { v: prevV, note: noteVal };
+  await saveData('diaryEntries', entries);
+};
+
+// Legacy alias so any old references still work
+window.updateMilestoneVal = window.updateMsMain;
 
 async function updateDiaryField(field, val) {
   if (!diarySelectedDate) return;
@@ -2451,28 +2565,56 @@ window.closeMilestoneModal = () => {
     renderDiaryMilestones(entry);
   }
 };
+// Show/hide the note label input based on selected note type
+window.toggleMsNoteLabel = () => {
+  const nt = document.getElementById('new-ms-note-type').value;
+  const lbl = document.getElementById('new-ms-note-label');
+  lbl.style.display = nt === 'none' ? 'none' : 'block';
+  lbl.placeholder = nt === 'time'     ? "Label, e.g. 'Woke at'"
+                  : nt === 'duration' ? "Label, e.g. 'Studied for'"
+                  : nt === 'number'   ? "Label, e.g. 'Distance (km)'"
+                  : "Label, e.g. 'Note'";
+};
+
 window.addMilestone = async () => {
   const name = document.getElementById('new-ms-name').value.trim();
-  if (!name) return;
+  if (!name) { showToast('Enter a milestone name', 'error'); return; }
+  const noteType = document.getElementById('new-ms-note-type').value;
+  const noteLabel = noteType !== 'none'
+    ? (document.getElementById('new-ms-note-label').value.trim() || name)
+    : '';
   window.appData.milestones.push({
-    id: 'ms_'+Date.now(),
+    id: 'ms_' + Date.now(),
     name,
-    type: document.getElementById('new-ms-type').value,
-    counted: document.getElementById('new-ms-rated').value,
+    type:      document.getElementById('new-ms-type').value,
+    counted:   document.getElementById('new-ms-rated').value,
+    noteType,   // 'none' | 'time' | 'duration' | 'number' | 'text'
+    noteLabel,  // label shown next to note field in diary
   });
+  // Reset form
   document.getElementById('new-ms-name').value = '';
+  document.getElementById('new-ms-note-type').value = 'none';
+  document.getElementById('new-ms-note-label').value = '';
+  document.getElementById('new-ms-note-label').style.display = 'none';
   await saveData('milestones', window.appData.milestones);
   renderMilestoneList();
 };
 function renderMilestoneList() {
-  document.getElementById('ms-list').innerHTML = window.appData.milestones.length ?
-    window.appData.milestones.map((m,i) =>
-      `<div class="milestone-item">
-        <span class="m-name">${m.name}</span>
-        <span class="tag ${m.type==='digital'?'blue':'yellow'}">${m.type}</span>
-        <span class="tag ${m.counted==='yes'?'green':''}">${m.counted==='yes'?'scored':'unscored'}</span>
-        <button class="delete-btn" onclick="removeMilestone(${i})">✕</button>
-      </div>`).join('')
+  document.getElementById('ms-list').innerHTML = window.appData.milestones.length
+    ? window.appData.milestones.map((m, i) => {
+        const noteTag = m.noteType && m.noteType !== 'none'
+          ? `<span class="tag" style="background:rgba(139,92,246,0.15);color:#c4b5fd;font-size:0.68rem">
+              +${m.noteType}${m.noteLabel ? ': ' + m.noteLabel : ''}
+             </span>`
+          : '';
+        return `<div class="milestone-item">
+          <span class="m-name">${m.name}</span>
+          <span class="tag ${m.type==='digital'?'blue':'yellow'}">${m.type}</span>
+          ${noteTag}
+          <span class="tag ${m.counted==='yes'?'green':''}">${m.counted==='yes'?'scored':'unscored'}</span>
+          <button class="delete-btn" onclick="removeMilestone(${i})">✕</button>
+        </div>`;
+      }).join('')
     : '<p class="text-xs text-muted">No milestones yet</p>';
 }
 window.removeMilestone = async (i) => { window.appData.milestones.splice(i,1); await saveData('milestones', window.appData.milestones); renderMilestoneList(); };
