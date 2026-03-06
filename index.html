@@ -83,6 +83,8 @@ body::before {
   position: fixed; inset: 0; z-index: 1000;
   display: flex; align-items: center; justify-content: center;
   background: var(--bg);
+  overflow-y: auto;
+  padding: 1rem 0;
 }
 .auth-card {
   width: min(420px, 94vw);
@@ -154,6 +156,10 @@ nav {
   background: rgba(8,11,18,0.88);
   backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border);
+}
+/* Hide top nav entirely on auth screen */
+body:not(.app-active) nav {
+  display: none;
 }
 .nav-logo {
   font-family: 'Instrument Serif', serif;
@@ -491,23 +497,27 @@ label { font-size: 0.83rem; color: var(--text2); display: block; margin-bottom: 
   }
   .nav-user { display: none; }
 
-  /* ── Pages: add bottom padding so content clears the bottom nav ── */
+  /* ── Pages: padding — top clears nav (52px), bottom clears bottom nav (62px) + gap ── */
   .page {
-    padding: 60px 1rem 80px;
+    padding: 58px 1rem 80px;
   }
 
-  /* ── Bottom navigation bar ── */
-  #mobile-nav {
+  /* ── Bottom navigation bar — only when logged in ── */
+  body.app-active #mobile-nav {
     display: flex !important;
   }
+
+  /* ── Also hide top nav links on mobile always ── */
+  nav > .nav-links { display: none !important; }
+  nav > .nav-user { display: none !important; }
 }
 
-/* Bottom nav — always rendered, visibility controlled by media query */
+/* Bottom nav — hidden until user is logged in (body.app-active) */
 #mobile-nav {
-  display: none; /* hidden by default on desktop */
+  display: none !important; /* hidden by default always */
   position: fixed;
   bottom: 0; left: 0; right: 0;
-  z-index: 9999; /* above everything */
+  z-index: 9999;
   height: 62px;
   background: rgba(8,11,18,0.98);
   backdrop-filter: blur(20px);
@@ -517,6 +527,10 @@ label { font-size: 0.83rem; color: var(--text2); display: block; margin-bottom: 
   justify-content: space-around;
   padding: 0 0.25rem;
   padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+/* Only show mobile-nav when app is active (logged in) on mobile */
+body.app-active #mobile-nav {
+  display: none !important; /* overridden by media query below */
 }
 .mob-nav-btn {
   flex: 1;
@@ -1315,6 +1329,7 @@ window.handleSignOut = async () => {
   document.getElementById('app').classList.remove('visible');
   document.getElementById('auth-screen').style.display = 'flex';
   document.getElementById('user-menu').style.display = 'none';
+  document.body.classList.remove('app-active'); // hides mobile nav + top nav
   // Reset mobile nav active state to College tab
   document.querySelectorAll('.mob-nav-btn').forEach(b => b.classList.remove('active'));
   const mainBtn = document.getElementById('mob-btn-main');
@@ -1356,6 +1371,7 @@ async function initApp(user) {
   document.getElementById('loading-screen').style.display = 'none';
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app').classList.add('visible');
+  document.body.classList.add('app-active'); // enables mobile nav + top nav
 
   const name = user ? (user.displayName || user.email) : 'Guest';
   const initial = name.charAt(0).toUpperCase();
@@ -1548,14 +1564,14 @@ function renderCalendar() {
   if (sem) {
     if (sem.examStart && sem.examEnd) {
       let d = new Date(sem.examStart);
-      while (d <= new Date(sem.examEnd)) { examSet.add(d.toISOString().slice(0,10)); d.setDate(d.getDate()+1); }
+      while (d <= new Date(sem.examEnd)) { examSet.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`); d.setDate(d.getDate()+1); }
     }
     (sem.papers||[]).forEach(p => { examSet.add(p.date); paperMap[p.date] = p.name; });
   }
   const vacMap = {};
   if (sem) (sem.vacations||[]).forEach(v => {
     let d = new Date(v.from);
-    while (d <= new Date(v.to)) { vacMap[d.toISOString().slice(0,10)] = v.name; d.setDate(d.getDate()+1); }
+    while (d <= new Date(v.to)) { vacMap[`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`] = v.name; d.setDate(d.getDate()+1); }
   });
 
   let html = '<tr>';
@@ -1784,7 +1800,7 @@ function renderTrackingPage() {
     document.getElementById('tracking-name-display').style.display = 'inline-flex';
     document.getElementById('tracking-name-display').textContent = `Tracking: ${window.appData.trackingName}`;
   }
-  document.getElementById('log-date').value = new Date().toISOString().slice(0,10);
+  const _nd1 = new Date(); document.getElementById('log-date').value = `${_nd1.getFullYear()}-${String(_nd1.getMonth()+1).padStart(2,'0')}-${String(_nd1.getDate()).padStart(2,'0')}`;
   renderTrackGrid();
 }
 
@@ -2091,7 +2107,7 @@ function renderInsights() {
   const last30 = [];
   for (let i=0;i<30;i++) {
     const d = new Date(today); d.setDate(d.getDate()-i);
-    const ds = d.toISOString().slice(0,10);
+    const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     if (entries[ds]) last30.push(calcScore(entries[ds]));
   }
   const avg = last30.length ? Math.round(last30.reduce((a,b)=>a+b,0)/last30.length) : 0;
@@ -2253,7 +2269,7 @@ function showToast(msg, type='success') {
 window.showToast = showToast;
 
 // Init log-date default
-document.getElementById('log-date').value = new Date().toISOString().slice(0,10);
+document.getElementById('log-date').value = `${(()=>{const _d=new Date();return _d.getFullYear()+'-'+String(_d.getMonth()+1).padStart(2,'0')+'-'+String(_d.getDate()).padStart(2,'0')})()}`;
 
 </script>
 </body>
