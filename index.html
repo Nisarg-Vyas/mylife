@@ -489,24 +489,25 @@ label { font-size: 0.83rem; color: var(--text2); display: block; margin-bottom: 
 
   /* ── Bottom navigation bar ── */
   #mobile-nav {
-    display: flex;
+    display: flex !important;
   }
 }
 
-/* Bottom nav — hidden on desktop, shown on mobile */
+/* Bottom nav — always rendered, visibility controlled by media query */
 #mobile-nav {
-  display: none;
+  display: none; /* hidden by default on desktop */
   position: fixed;
   bottom: 0; left: 0; right: 0;
-  z-index: 100;
+  z-index: 9999; /* above everything */
   height: 62px;
-  background: rgba(8,11,18,0.97);
-  backdrop-filter: blur(16px);
-  border-top: 1px solid var(--border);
+  background: rgba(8,11,18,0.98);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border2);
   align-items: stretch;
   justify-content: space-around;
   padding: 0 0.25rem;
-  padding-bottom: env(safe-area-inset-bottom, 0px); /* iPhone notch support */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 .mob-nav-btn {
   flex: 1;
@@ -983,6 +984,32 @@ label { font-size: 0.83rem; color: var(--text2); display: block; margin-bottom: 
   </div>
 </div>
 
+  <!-- ══ MOBILE BOTTOM NAV (inside #app so it hides on login) ══ -->
+  <nav id="mobile-nav">
+    <button class="mob-nav-btn active" id="mob-btn-main" onclick="showPage('main')">
+      <span class="mob-icon">🎓</span>
+      <span>College</span>
+    </button>
+    <button class="mob-nav-btn" id="mob-btn-tracking" onclick="showPage('tracking')">
+      <span class="mob-icon">📊</span>
+      <span>Track</span>
+    </button>
+    <button class="mob-nav-btn" id="mob-btn-diary" onclick="showPage('diary')">
+      <span class="mob-icon">📔</span>
+      <span>Diary</span>
+    </button>
+    <button class="mob-nav-btn" id="mob-btn-insights" onclick="showPage('insights')">
+      <span class="mob-icon">✨</span>
+      <span>Insights</span>
+    </button>
+    <button class="mob-nav-btn" id="mob-btn-account" onclick="toggleUserMenu()">
+      <span class="mob-icon" id="mob-avatar-icon">👤</span>
+      <span>Account</span>
+    </button>
+  </nav>
+
+</div><!-- end #app -->
+
 <!-- ════════════════════ MODALS ════════════════════ -->
 
 <!-- Semester Setup Wizard -->
@@ -1078,30 +1105,6 @@ label { font-size: 0.83rem; color: var(--text2); display: block; margin-bottom: 
 
 <!-- Toast -->
 <div id="toast"></div>
-
-<!-- ══ MOBILE BOTTOM NAV ══ -->
-<nav id="mobile-nav">
-  <button class="mob-nav-btn active" id="mob-btn-main" onclick="showPage('main')">
-    <span class="mob-icon">🎓</span>
-    <span>College</span>
-  </button>
-  <button class="mob-nav-btn" id="mob-btn-tracking" onclick="showPage('tracking')">
-    <span class="mob-icon">📊</span>
-    <span>Track</span>
-  </button>
-  <button class="mob-nav-btn" id="mob-btn-diary" onclick="showPage('diary')">
-    <span class="mob-icon">📔</span>
-    <span>Diary</span>
-  </button>
-  <button class="mob-nav-btn" id="mob-btn-insights" onclick="showPage('insights')">
-    <span class="mob-icon">✨</span>
-    <span>Insights</span>
-  </button>
-  <button class="mob-nav-btn" id="mob-btn-account" onclick="toggleUserMenu()">
-    <span class="mob-icon" id="mob-avatar-icon">👤</span>
-    <span>Account</span>
-  </button>
-</nav>
 
 <!-- ══════════════════ APP SCRIPT ══════════════════ -->
 <script type="module">
