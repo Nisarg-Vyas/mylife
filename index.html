@@ -1506,12 +1506,14 @@ window.exportDiary = () => {
           done = v && parseFloat(v) > 0;
           valLabel = done ? `${v}` : 'Not logged';
         }
-        // Format time note nicely for export
+        // Format HH:MM to 12-hour display for export
         let noteDisplay = note || '';
-        if (note && m.noteType === 'time' && note.includes('|')) {
-          const [t, ap] = note.split('|');
-          const [hh, mm] = t.split(':');
-          noteDisplay = `${hh}:${mm} ${ap}`;
+        if (note && m.noteType === 'time' && note.includes(':')) {
+          const [hh, mm] = note.split(':');
+          const h = parseInt(hh, 10);
+          const ap = h >= 12 ? 'PM' : 'AM';
+          const h12 = h % 12 || 12;
+          noteDisplay = `${h12}:${mm} ${ap}`;
         }
         const noteStr = noteDisplay
           ? ` <span style="color:#777;font-size:0.78rem">(${m.noteLabel||m.noteType}: ${noteDisplay})</span>`
@@ -1634,30 +1636,119 @@ window.exportHabit = () => {
 };
 
 // ── Core print function ──
-function printContent(html, docTitle) {
-  const container = document.getElementById('print-container');
-  container.innerHTML = html;
+function printContent(bodyHtml, docTitle) {
+  // Open a new blank window and write clean light-mode HTML directly.
+  // This avoids ALL dark-mode CSS variable conflicts and inline style issues.
+  const win = window.open('', '_blank', 'width=900,height=700');
+  if (!win) {
+    showToast('Pop-up blocked — please allow pop-ups for this site', 'error');
+    return;
+  }
+  win.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${docTitle}</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: Georgia, 'Times New Roman', serif;
+      background: #ffffff;
+      color: #111111;
+      padding: 0;
+    }
+    .pr-page {
+      padding: 2cm 2.5cm;
+      min-height: 27cm;
+      page-break-after: always;
+    }
+    .pr-page:last-child { page-break-after: avoid; }
 
-  const origTitle = document.title;
-  document.title = docTitle;
+    /* Cover */
+    .pr-cover {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      min-height: 20cm; text-align: center;
+    }
+    .pr-cover-title { font-size: 2.8rem; font-weight: bold; color: #c0392b; margin-bottom: 0.5rem; }
+    .pr-cover-sub   { font-size: 1.1rem; color: #555; margin-bottom: 0.25rem; }
+    .pr-cover-range { font-size: 0.95rem; color: #888; margin-top: 0.75rem; }
 
-  // Add printing class so our CSS hides the app UI
-  document.body.classList.add('printing');
+    /* Day header */
+    .pr-day-header {
+      border-bottom: 2px solid #c0392b;
+      margin-bottom: 0.6rem; padding-bottom: 0.35rem;
+      display: flex; justify-content: space-between; align-items: baseline;
+    }
+    .pr-day-date { font-size: 1.25rem; font-weight: bold; color: #c0392b; }
+    .pr-day-meta { font-size: 0.9rem; color: #666; }
 
-  // Use onafterprint to clean up reliably
-  const cleanup = () => {
-    document.body.classList.remove('printing');
-    document.title = origTitle;
-    container.innerHTML = '';
-    window.removeEventListener('afterprint', cleanup);
-  };
-  window.addEventListener('afterprint', cleanup);
+    /* Section label */
+    .pr-section-label {
+      font-size: 0.68rem; font-weight: bold; letter-spacing: 0.09em;
+      color: #999; text-transform: uppercase; margin: 0.9rem 0 0.3rem;
+    }
 
-  setTimeout(() => {
-    window.print();
-    // Fallback cleanup if afterprint doesn't fire (some mobile browsers)
-    setTimeout(cleanup, 3000);
-  }, 150);
+    /* Journal */
+    .pr-body {
+      font-size: 0.93rem; line-height: 1.7; color: #222;
+      white-space: pre-wrap;
+    }
+
+    /* Score bar */
+    .pr-score-bar { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.35rem; }
+    .pr-score-track { flex:1; height: 8px; background: #eee; border-radius: 4px; overflow: hidden; }
+    .pr-score-fill  { height: 8px; border-radius: 4px; }
+    .pr-score-num   { font-size: 0.85rem; font-weight: bold; min-width: 3rem; }
+
+    /* Milestones */
+    .pr-ms-row {
+      display: flex; align-items: center; gap: 0.5rem;
+      margin: 0.25rem 0; font-size: 0.88rem;
+    }
+    .pr-ms-dot  { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .pr-ms-done { background: #27ae60; }
+    .pr-ms-skip { background: #ccc; }
+
+    /* Expense table */
+    .pr-exp-table { width:100%; border-collapse: collapse; font-size: 0.88rem; margin-top: 0.3rem; }
+    .pr-exp-table th { background: #f5f5f5; padding: 5px 9px; text-align: left; border: 1px solid #ddd; font-weight: 600; }
+    .pr-exp-table td { padding: 4px 9px; border: 1px solid #ddd; }
+    .pr-exp-total { text-align: right; font-weight: bold; margin-top: 0.25rem; font-size: 0.88rem; }
+
+    /* Habit tracker */
+    .pr-month-header {
+      background: #f5f5f5; padding: 0.45rem 0.7rem;
+      font-weight: bold; font-size: 1rem; color: #333;
+      margin: 1rem 0 0.5rem; border-left: 3px solid #c0392b;
+    }
+    .pr-habit-summary { margin: 0.4rem 0 0.9rem; font-size: 0.85rem; color: #555; }
+    .pr-habit-row {
+      display: flex; align-items: flex-start; gap: 0.5rem;
+      padding: 0.45rem 0; border-bottom: 1px solid #eee; font-size: 0.88rem;
+    }
+    .pr-habit-date  { min-width: 6.5rem; font-weight: bold; color: #333; }
+    .pr-habit-count { min-width: 3rem; color: #c0392b; font-weight: bold; }
+    .pr-habit-with  { min-width: 5.5rem; color: #777; font-size: 0.8rem; }
+    .pr-habit-note  { color: #555; flex: 1; }
+
+    @media print {
+      body { padding: 0; }
+      .pr-page { page-break-after: always; }
+      .pr-page:last-child { page-break-after: avoid; }
+    }
+  </style>
+</head>
+<body>
+${bodyHtml}
+</body>
+</html>`);
+  win.document.close();
+
+  // Trigger print after content loads
+  win.onload = () => { win.focus(); win.print(); };
+  // Fallback if onload already fired
+  setTimeout(() => { try { win.focus(); win.print(); } catch(e){} }, 800);
 }
 
 // Expose save/load to global scope
@@ -2381,6 +2472,16 @@ window.openDiaryDay = (ds) => {
 };
 window.closeDiaryEntry = () => { document.getElementById('diary-entry-section').style.display='none'; diarySelectedDate=null; renderDiaryGrid(); };
 
+// Format stored HH:MM to "H:MM AM/PM" for display
+function fmt12h(timeStr) {
+  if (!timeStr || !timeStr.includes(':')) return timeStr;
+  // Handle legacy "HH:MM|AM" format
+  const clean = timeStr.split('|')[0];
+  const [hh, mm] = clean.split(':');
+  const h = parseInt(hh, 10);
+  return `${h % 12 || 12}:${mm} ${h >= 12 ? 'PM' : 'AM'}`;
+}
+
 function renderDiaryMilestones(entry) {
   const c = document.getElementById('diary-milestones-list');
   const ms = window.appData.milestones;
@@ -2390,7 +2491,9 @@ function renderDiaryMilestones(entry) {
     // stored value: primitive for old milestones, {v, note} for milestones with noteType
     const stored  = entry.milestones?.[m.id];
     const mainVal = stored && typeof stored === 'object' ? stored.v    : stored;
-    const noteVal = stored && typeof stored === 'object' ? stored.note : '';
+    // Strip legacy "|AM"/"|PM" suffix from time values if present
+    const rawNote = stored && typeof stored === 'object' ? stored.note : '';
+    const noteVal = rawNote ? rawNote.split('|')[0] : '';
 
     // Primary input
     let inp = m.type === 'digital'
@@ -2403,20 +2506,12 @@ function renderDiaryMilestones(entry) {
       const lbl = m.noteLabel || m.noteType;
       let noteInp = '';
       if (m.noteType === 'time') {
-        // Two fields: native time picker + 12-hr display
-        const timeVal = noteVal ? noteVal.split('|')[0] : '';   // "HH:MM" for picker
-        const ampmVal = noteVal ? (noteVal.split('|')[1] || '') : ''; // "AM"/"PM"
+        // Single time picker — browser handles 12h/24h per locale
+        // Store as "HH:MM" (24h), display auto-converts
         noteInp = `<input type="time" id="ms-note-${m.id}" class="input"
-            style="width:110px;padding:0.25rem 0.4rem;font-size:0.82rem"
-            value="${timeVal}"
-            oninput="window.updateMsNote('${m.id}')">
-          <select id="ms-ampm-${m.id}" class="input"
-            style="width:68px;padding:0.25rem 0.3rem;font-size:0.82rem"
-            onchange="window.updateMsNote('${m.id}')">
-            <option value="" ${!ampmVal?'selected':''}>—</option>
-            <option value="AM" ${ampmVal==='AM'?'selected':''}>AM</option>
-            <option value="PM" ${ampmVal==='PM'?'selected':''}>PM</option>
-          </select>`;
+            style="width:120px;padding:0.25rem 0.4rem;font-size:0.82rem"
+            value="${noteVal||''}"
+            oninput="window.updateMsNote('${m.id}')">`;
       } else if (m.noteType === 'duration') {
         noteInp = `<input type="text" id="ms-note-${m.id}" class="input"
             style="width:110px;padding:0.25rem 0.4rem;font-size:0.82rem"
@@ -2476,14 +2571,8 @@ window.updateMsNote = async (id) => {
     entries[diarySelectedDate] = {milestones:{}, expenses:[], journal:'', mood:2};
   const ms = window.appData.milestones.find(m => m.id === id);
   if (!ms) return;
-  let noteVal = '';
-  if (ms.noteType === 'time') {
-    const t  = document.getElementById('ms-note-' + id)?.value || '';
-    const ap = document.getElementById('ms-ampm-' + id)?.value || '';
-    noteVal = t ? (t + (ap ? '|' + ap : '')) : '';
-  } else {
-    noteVal = document.getElementById('ms-note-' + id)?.value || '';
-  }
+  // Always just grab the value directly — time input gives HH:MM (24h)
+  const noteVal = document.getElementById('ms-note-' + id)?.value || '';
   const prev  = entries[diarySelectedDate].milestones[id];
   const prevV = prev && typeof prev === 'object' ? prev.v : (prev || false);
   entries[diarySelectedDate].milestones[id] = { v: prevV, note: noteVal };
