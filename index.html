@@ -542,13 +542,14 @@ label { font-size: 0.83rem; color: var(--text2); display: block; margin-bottom: 
    PRINT / PDF EXPORT STYLES
    These only apply when window.print() is called
    ══════════════════════════════════════════════ */
+/* Print styles — use body.printing class to avoid mobile browser bleed */
+body.printing > *:not(#print-container) { display: none !important; }
+body.printing #print-container { display: block !important; }
+
 @media print {
-  /* Hide everything except the print container */
   body > *:not(#print-container) { display: none !important; }
   #print-container { display: block !important; }
-
   body { background: #fff !important; color: #111 !important; font-family: Georgia, serif; }
-
   #print-container { padding: 0; margin: 0; }
 
   .pr-page {
@@ -1932,18 +1933,26 @@ function printContent(html, docTitle) {
   const container = document.getElementById('print-container');
   container.innerHTML = html;
 
-  // Temporarily set the document title (becomes default PDF filename)
   const origTitle = document.title;
   document.title = docTitle;
 
+  // Add printing class so our CSS hides the app UI
+  document.body.classList.add('printing');
+
+  // Use onafterprint to clean up reliably
+  const cleanup = () => {
+    document.body.classList.remove('printing');
+    document.title = origTitle;
+    container.innerHTML = '';
+    window.removeEventListener('afterprint', cleanup);
+  };
+  window.addEventListener('afterprint', cleanup);
+
   setTimeout(() => {
     window.print();
-    // Restore title after print dialog opens
-    setTimeout(() => {
-      document.title = origTitle;
-      container.innerHTML = '';
-    }, 1000);
-  }, 100);
+    // Fallback cleanup if afterprint doesn't fire (some mobile browsers)
+    setTimeout(cleanup, 3000);
+  }, 150);
 }
 
 // Expose save/load to global scope
