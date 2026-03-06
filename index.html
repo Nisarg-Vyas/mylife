@@ -465,11 +465,81 @@ label { font-size: 0.83rem; color: var(--text2); display: block; margin-bottom: 
 @media (max-width: 768px) {
   .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
   .btech-years { gap: 0.75rem; }
-  .cal-day { min-height: 55px; }
-  nav { padding: 0 1rem; }
-  .page { padding: 66px 1rem 2rem; }
-  .modal { padding: 1.5rem; }
-  .diary-page { padding: 1.25rem; }
+  .cal-day { min-height: 52px; }
+  .modal { padding: 1.25rem; }
+  .diary-page { padding: 1rem; }
+  .section-title { font-size: 1.5rem; }
+  .stat-num { font-size: 1.8rem; }
+  .btech-num { font-size: 1.3rem; }
+
+  /* ── Top nav: hide tab buttons, show only logo + avatar ── */
+  nav {
+    padding: 0 1rem;
+    height: 52px;
+  }
+  .nav-links {
+    display: none; /* tabs move to bottom bar */
+  }
+  .nav-user { display: none; }
+
+  /* ── Pages: add bottom padding so content clears the bottom nav ── */
+  .page {
+    padding: 60px 1rem 80px;
+  }
+
+  /* ── Bottom navigation bar ── */
+  #mobile-nav {
+    display: flex;
+  }
+}
+
+/* Bottom nav — hidden on desktop, shown on mobile */
+#mobile-nav {
+  display: none;
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 100;
+  height: 62px;
+  background: rgba(8,11,18,0.97);
+  backdrop-filter: blur(16px);
+  border-top: 1px solid var(--border);
+  align-items: stretch;
+  justify-content: space-around;
+  padding: 0 0.25rem;
+  padding-bottom: env(safe-area-inset-bottom, 0px); /* iPhone notch support */
+}
+.mob-nav-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text3);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.6rem;
+  font-weight: 500;
+  padding: 0.4rem 0.25rem;
+  border-radius: 10px;
+  transition: all 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.mob-nav-btn .mob-icon {
+  font-size: 1.35rem;
+  line-height: 1;
+  transition: transform 0.15s;
+}
+.mob-nav-btn.active {
+  color: var(--accent);
+}
+.mob-nav-btn.active .mob-icon {
+  transform: translateY(-2px);
+}
+.mob-nav-btn:active {
+  background: var(--surface2);
 }
 </style>
 </head>
@@ -1009,6 +1079,30 @@ label { font-size: 0.83rem; color: var(--text2); display: block; margin-bottom: 
 <!-- Toast -->
 <div id="toast"></div>
 
+<!-- ══ MOBILE BOTTOM NAV ══ -->
+<nav id="mobile-nav">
+  <button class="mob-nav-btn active" id="mob-btn-main" onclick="showPage('main')">
+    <span class="mob-icon">🎓</span>
+    <span>College</span>
+  </button>
+  <button class="mob-nav-btn" id="mob-btn-tracking" onclick="showPage('tracking')">
+    <span class="mob-icon">📊</span>
+    <span>Track</span>
+  </button>
+  <button class="mob-nav-btn" id="mob-btn-diary" onclick="showPage('diary')">
+    <span class="mob-icon">📔</span>
+    <span>Diary</span>
+  </button>
+  <button class="mob-nav-btn" id="mob-btn-insights" onclick="showPage('insights')">
+    <span class="mob-icon">✨</span>
+    <span>Insights</span>
+  </button>
+  <button class="mob-nav-btn" id="mob-btn-account" onclick="toggleUserMenu()">
+    <span class="mob-icon" id="mob-avatar-icon">👤</span>
+    <span>Account</span>
+  </button>
+</nav>
+
 <!-- ══════════════════ APP SCRIPT ══════════════════ -->
 <script type="module">
 
@@ -1239,6 +1333,9 @@ async function initApp(user) {
   document.getElementById('nav-avatar').textContent = initial;
   document.getElementById('nav-user-name').textContent = user ? name.split(' ')[0] : 'Offline';
   document.getElementById('user-menu-email').textContent = user ? user.email : 'Local mode';
+  // Sync mobile avatar icon
+  const mobAvatar = document.getElementById('mob-avatar-icon');
+  if (mobAvatar) mobAvatar.textContent = initial;
 
   // Pre-fill BTech setup
   if (window.appData.btechInfo) {
@@ -1973,11 +2070,17 @@ window.showPage = (p) => {
   document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));
   document.getElementById('page-'+p).classList.add('active');
-  const pages = ['main','tracking','diary','insights','btech-setup'];
-  const btns = document.querySelectorAll('.nav-btn');
+  // Update desktop nav
   const mainPages = ['main','tracking','diary','insights'];
+  const btns = document.querySelectorAll('.nav-btn');
   const idx = mainPages.indexOf(p);
   if (idx >= 0 && btns[idx]) btns[idx].classList.add('active');
+  // Update mobile bottom nav
+  ['main','tracking','diary','insights'].forEach(pg => {
+    const btn = document.getElementById('mob-btn-'+pg);
+    if (btn) btn.classList.toggle('active', pg === p);
+  });
+  // btech-setup has no bottom nav btn — keep current active state
   document.getElementById('user-menu').style.display = 'none';
   if (p==='tracking') renderTrackingPage();
   if (p==='diary') renderDiaryGrid();
