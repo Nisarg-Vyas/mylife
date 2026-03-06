@@ -157,10 +157,8 @@ nav {
   backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border);
 }
-/* Hide top nav entirely on auth screen */
-body:not(.app-active) nav {
-  display: none;
-}
+/* Top nav hidden by default; shown via JS when logged in */
+nav { display: none; }
 .nav-logo {
   font-family: 'Instrument Serif', serif;
   font-size: 1.3rem; color: var(--accent);
@@ -470,51 +468,12 @@ label { font-size: 0.83rem; color: var(--text2); display: block; margin-bottom: 
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
 
-@media (max-width: 768px) {
-  .grid-3, .grid-4 { grid-template-columns: 1fr 1fr; }
-  .grid-2 { grid-template-columns: 1fr; }
-  .btech-years { gap: 0.75rem; }
-  .cal-day { min-height: 52px; }
-  .track-cal-day { min-height: 48px; }
-  .diary-cal-day { min-height: 48px; padding: 0.3rem; }
-  .track-cal-day .t-num { font-size: 0.65rem; }
-  .modal { padding: 1.25rem; }
-  .diary-page { padding: 1rem; }
-  .section-title { font-size: 1.5rem; }
-  .stat-num { font-size: 1.8rem; }
-  .btech-num { font-size: 1.3rem; }
-
-  /* ── iOS input zoom fix: font-size must be >= 16px to prevent auto-zoom ── */
-  .input, select.input, textarea.input { font-size: 16px !important; }
-
-  /* ── Top nav: hide tab buttons, show only logo + avatar ── */
-  nav {
-    padding: 0 1rem;
-    height: 52px;
-  }
-  .nav-links {
-    display: none; /* tabs move to bottom bar */
-  }
-  .nav-user { display: none; }
-
-  /* ── Pages: padding — top clears nav (52px), bottom clears bottom nav (62px) + gap ── */
-  .page {
-    padding: 58px 1rem 80px;
-  }
-
-  /* ── Bottom navigation bar — only when logged in ── */
-  body.app-active #mobile-nav {
-    display: flex !important;
-  }
-
-  /* ── Also hide top nav links on mobile always ── */
-  nav > .nav-links { display: none !important; }
-  nav > .nav-user { display: none !important; }
-}
-
-/* Bottom nav — hidden until user is logged in (body.app-active) */
+/* ── Bottom navigation bar ──
+   Base rule: always hidden.
+   Shown ONLY on mobile when body.app-active (logged in).
+   Order matters: base first, override after. */
 #mobile-nav {
-  display: none !important; /* hidden by default always */
+  display: none;
   position: fixed;
   bottom: 0; left: 0; right: 0;
   z-index: 9999;
@@ -527,10 +486,6 @@ label { font-size: 0.83rem; color: var(--text2); display: block; margin-bottom: 
   justify-content: space-around;
   padding: 0 0.25rem;
   padding-bottom: env(safe-area-inset-bottom, 0px);
-}
-/* Only show mobile-nav when app is active (logged in) on mobile */
-body.app-active #mobile-nav {
-  display: none !important; /* overridden by media query below */
 }
 .mob-nav-btn {
   flex: 1;
@@ -556,14 +511,31 @@ body.app-active #mobile-nav {
   line-height: 1;
   transition: transform 0.15s;
 }
-.mob-nav-btn.active {
-  color: var(--accent);
-}
-.mob-nav-btn.active .mob-icon {
-  transform: translateY(-2px);
-}
-.mob-nav-btn:active {
-  background: var(--surface2);
+.mob-nav-btn.active { color: var(--accent); }
+.mob-nav-btn.active .mob-icon { transform: translateY(-2px); }
+.mob-nav-btn:active { background: var(--surface2); }
+
+/* ── Mobile layout (≤768px) ── */
+@media (max-width: 768px) {
+  .grid-3, .grid-4 { grid-template-columns: 1fr 1fr; }
+  .grid-2 { grid-template-columns: 1fr; }
+  .btech-years { gap: 0.75rem; }
+  .cal-day { min-height: 52px; }
+  .track-cal-day { min-height: 48px; }
+  .diary-cal-day { min-height: 48px; padding: 0.3rem; }
+  .track-cal-day .t-num { font-size: 0.65rem; }
+  .modal { padding: 1.25rem; }
+  .diary-page { padding: 1rem; }
+  .section-title { font-size: 1.5rem; }
+  .stat-num { font-size: 1.8rem; }
+  .btech-num { font-size: 1.3rem; }
+  .input, select.input, textarea.input { font-size: 16px !important; }
+  nav { padding: 0 1rem; height: 52px; }
+  .nav-links { display: none; }
+  .nav-user { display: none; }
+  .page { padding: 58px 1rem 80px; }
+
+  /* Mobile nav shown via JS — no CSS class needed */
 }
 </style>
 </head>
@@ -1329,7 +1301,9 @@ window.handleSignOut = async () => {
   document.getElementById('app').classList.remove('visible');
   document.getElementById('auth-screen').style.display = 'flex';
   document.getElementById('user-menu').style.display = 'none';
-  document.body.classList.remove('app-active'); // hides mobile nav + top nav
+  // Hide nav elements directly
+  document.querySelector('nav').style.display = 'none';
+  document.getElementById('mobile-nav').style.display = 'none';
   // Reset mobile nav active state to College tab
   document.querySelectorAll('.mob-nav-btn').forEach(b => b.classList.remove('active'));
   const mainBtn = document.getElementById('mob-btn-main');
@@ -1371,7 +1345,11 @@ async function initApp(user) {
   document.getElementById('loading-screen').style.display = 'none';
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app').classList.add('visible');
-  document.body.classList.add('app-active'); // enables mobile nav + top nav
+  // Show top nav and mobile nav directly — reliable cross-browser
+  document.querySelector('nav').style.display = 'flex';
+  if (window.innerWidth <= 768) {
+    document.getElementById('mobile-nav').style.display = 'flex';
+  }
 
   const name = user ? (user.displayName || user.email) : 'Guest';
   const initial = name.charAt(0).toUpperCase();
