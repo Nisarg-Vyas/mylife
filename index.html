@@ -288,6 +288,7 @@ label { font-size: 0.83rem; color: var(--text2); display: block; margin-bottom: 
   padding: 1.25rem 1.5rem;
   margin-bottom: 1rem;
   display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;
+  overflow: hidden;
 }
 .btech-years {
   display: flex; gap: 1.25rem; flex-wrap: wrap;
@@ -325,11 +326,12 @@ label { font-size: 0.83rem; color: var(--text2); display: block; margin-bottom: 
 .chip-festival { background: rgba(240,180,41,0.2); color: var(--accent2); }
 .chip-user { background: rgba(59,130,246,0.2); color: #7ab3ff; }
 .chip-tithi { background: rgba(74,90,120,0.3); color: var(--text3); font-size: 0.58rem; }
+.tithi-badge { font-size: 0.55rem; color: var(--text3); font-family: 'JetBrains Mono', monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 52px; }
 .chip-bday { background: rgba(168,85,247,0.2); color: #c084fc; }
 
 /* ═══════════════════════ MODALS ═══════════════════════ */
 .modal-overlay {
-  display: none; position: fixed; inset: 0; z-index: 200;
+  display: none; position: fixed; inset: 0; z-index: 10001;
   background: rgba(0,0,0,0.75); backdrop-filter: blur(6px);
   align-items: center; justify-content: center; padding: 1rem;
 }
@@ -396,7 +398,7 @@ label { font-size: 0.83rem; color: var(--text2); display: block; margin-bottom: 
 .milestone-item input[type=checkbox] { accent-color: var(--accent); width: 16px; height: 16px; cursor: pointer; flex-shrink:0; }
 .milestone-item .m-name { flex: 1; font-size: 0.875rem; }
 .milestone-item .m-badge { font-size: 0.68rem; color: var(--text3); white-space:nowrap; }
-.expense-row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center; }
+.expense-row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center; flex-wrap: wrap; }
 .diary-page { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 2rem; }
 .diary-date-header {
   font-family: 'Instrument Serif', serif; font-size: 1.75rem; margin-bottom: 1.5rem;
@@ -418,7 +420,7 @@ label { font-size: 0.83rem; color: var(--text2); display: block; margin-bottom: 
 
 /* ═══════════════════════ TOAST ═══════════════════════ */
 #toast {
-  position: fixed; bottom: 2rem; right: 2rem; z-index: 9999;
+  position: fixed; bottom: 5rem; right: 1rem; z-index: 20000;
   background: var(--surface3); border: 1px solid var(--border2);
   border-radius: 10px; padding: 0.75rem 1.25rem;
   font-size: 0.875rem; color: var(--text);
@@ -463,14 +465,21 @@ label { font-size: 0.83rem; color: var(--text2); display: block; margin-bottom: 
 ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
 
 @media (max-width: 768px) {
-  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  .grid-3, .grid-4 { grid-template-columns: 1fr 1fr; }
+  .grid-2 { grid-template-columns: 1fr; }
   .btech-years { gap: 0.75rem; }
   .cal-day { min-height: 52px; }
+  .track-cal-day { min-height: 48px; }
+  .diary-cal-day { min-height: 48px; padding: 0.3rem; }
+  .track-cal-day .t-num { font-size: 0.65rem; }
   .modal { padding: 1.25rem; }
   .diary-page { padding: 1rem; }
   .section-title { font-size: 1.5rem; }
   .stat-num { font-size: 1.8rem; }
   .btech-num { font-size: 1.3rem; }
+
+  /* ── iOS input zoom fix: font-size must be >= 16px to prevent auto-zoom ── */
+  .input, select.input, textarea.input { font-size: 16px !important; }
 
   /* ── Top nav: hide tab buttons, show only logo + avatar ── */
   nav {
@@ -626,7 +635,7 @@ label { font-size: 0.83rem; color: var(--text2); display: block; margin-bottom: 
       Continue with Google
     </button>
 
-    <div id="auth-offline-mode" style="margin-top:1rem;text-align:center">
+    <div id="auth-offline-mode" style="margin-top:1rem;text-align:center;display:none">
       <button class="btn btn-secondary" style="width:100%;justify-content:center;font-size:0.8rem" onclick="useOfflineMode()">Continue without account (local only)</button>
     </div>
   </div>
@@ -649,10 +658,13 @@ label { font-size: 0.83rem; color: var(--text2); display: block; margin-bottom: 
   </nav>
 
   <!-- User menu dropdown -->
-  <div id="user-menu" style="display:none;position:fixed;top:60px;right:1.5rem;z-index:150;background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:0.75rem;min-width:180px;box-shadow:var(--shadow)">
-    <div style="font-size:0.8rem;color:var(--text2);padding:0.25rem 0.5rem;margin-bottom:0.5rem" id="user-menu-email"></div>
-    <button class="btn btn-secondary btn-sm" style="width:100%;justify-content:center;margin-bottom:0.4rem" onclick="showPage('btech-setup');toggleUserMenu()">⚙️ BTech Settings</button>
-    <button class="btn btn-danger btn-sm" style="width:100%;justify-content:center" onclick="handleSignOut()">Sign Out</button>
+  <div id="user-menu" style="display:none;position:fixed;top:60px;right:1.5rem;z-index:10000;background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:0.75rem;min-width:200px;box-shadow:var(--shadow)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem">
+      <div style="font-size:0.8rem;color:var(--text2);padding:0.25rem 0" id="user-menu-email"></div>
+      <button onclick="toggleUserMenu()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:1rem;padding:2px 6px;border-radius:6px;line-height:1">✕</button>
+    </div>
+    <button class="btn btn-secondary btn-sm" style="width:100%;justify-content:center;margin-bottom:0.5rem;padding:0.6rem" onclick="showPage('btech-setup');toggleUserMenu()">⚙️ BTech Settings</button>
+    <button class="btn btn-danger btn-sm" style="width:100%;justify-content:center;padding:0.6rem" onclick="handleSignOut()">🚪 Sign Out</button>
   </div>
 
   <!-- ═══ COLLEGE PAGE ═══ -->
@@ -845,7 +857,7 @@ label { font-size: 0.83rem; color: var(--text2); display: block; margin-bottom: 
       </div>
       <div class="form-group">
         <label>Notes</label>
-        <input type="text" class="input" id="log-note" placeholder="Optional note...">
+        <input type="text" class="input" id="log-note" placeholder="Optional note..." onkeyup="if(event.key==='Enter')saveTrackLog()">
       </div>
       <button class="btn btn-primary" onclick="saveTrackLog()">💾 Save Entry</button>
     </div>
@@ -1292,9 +1304,23 @@ window.handleSignOut = async () => {
     await signOut(auth);
   }
   currentUser = null;
+  // Reset all UI state so next login starts fresh
+  diarySelectedDate = null;
+  currentMoodIdx = 2;
+  const now = new Date();
+  calMonth = now.getMonth(); calYear = now.getFullYear();
+  trackMonth = now.getMonth(); trackYear = now.getFullYear();
+  diaryMonth = now.getMonth(); diaryYear = now.getFullYear();
+  document.getElementById('diary-entry-section').style.display = 'none';
   document.getElementById('app').classList.remove('visible');
   document.getElementById('auth-screen').style.display = 'flex';
   document.getElementById('user-menu').style.display = 'none';
+  // Reset mobile nav active state to College tab
+  document.querySelectorAll('.mob-nav-btn').forEach(b => b.classList.remove('active'));
+  const mainBtn = document.getElementById('mob-btn-main');
+  if (mainBtn) mainBtn.classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.nav-btn')[0]?.classList.add('active');
   window.appData = { semester:null, customEvents:{}, trackingName:'', trackingLog:{}, milestones:[], diaryEntries:{}, btechInfo:null };
 };
 
@@ -1350,7 +1376,6 @@ async function initApp(user) {
   }
 
   renderMain();
-  window.renderTrackingPage = renderTrackingPage;
 }
 
 if (firebaseReady) {
@@ -1382,6 +1407,8 @@ if (firebaseReady) {
   // Firebase not configured — straight to offline/local mode
   await initApp(null);
   document.getElementById('config-notice').classList.add('show');
+  const offlineBtn = document.getElementById('auth-offline-mode');
+  if (offlineBtn) offlineBtn.style.display = 'block';
 }
 
 // Offline/local mode
@@ -1535,7 +1562,8 @@ function renderCalendar() {
   for (let i=0;i<firstDay;i++) html += '<td><div class="cal-day other-month"></div></td>';
   for (let d=1; d<=daysInMonth; d++) {
     const dateObj = new Date(calYear, calMonth, d);
-    const ds = dateObj.toISOString().slice(0,10);
+    // Use local date string to avoid UTC offset shifting the date (important for IST users)
+    const ds = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const dow = dateObj.getDay();
     const isToday = dateObj.getTime() === today.getTime();
     const isWe = dow === 0 || dow === 6;
@@ -1557,7 +1585,8 @@ function renderCalendar() {
     html += `</div></div></td>`;
     if ((firstDay+d) % 7 === 0) html += '</tr><tr>';
   }
-  html += '</tr>';
+  // Remove trailing empty row if it was started but has no cells
+  html = html.replace(/<tr><\/tr>/g, '').replace(/<tr>$/, '');
   document.getElementById('cal-body').innerHTML = html;
 }
 
@@ -1660,7 +1689,8 @@ window.addVacation = () => {
   const name = document.getElementById('s-vac-name').value.trim();
   const from = document.getElementById('s-vac-from').value;
   const to = document.getElementById('s-vac-to').value;
-  if (!name||!from||!to) return;
+  if (!name||!from||!to) { showToast('Please fill all vacation fields', 'error'); return; }
+  if (new Date(to) < new Date(from)) { showToast('End date must be after start date', 'error'); return; }
   if (!window.appData.semester) window.appData.semester = {};
   if (!window.appData.semester.vacations) window.appData.semester.vacations = [];
   window.appData.semester.vacations.push({name,from,to});
@@ -1679,30 +1709,44 @@ function renderSetupVacations() {
 window.removeVacation = (i) => { window.appData.semester.vacations.splice(i,1); renderSetupVacations(); };
 
 window.saveSetup = async () => {
+  const start = document.getElementById('s-sem-start').value;
+  const end = document.getElementById('s-sem-end').value;
+  if (!start || !end) {
+    showToast('Please enter semester start and end dates', 'error');
+    return;
+  }
+  if (new Date(end) <= new Date(start)) {
+    showToast('End date must be after start date', 'error');
+    return;
+  }
   if (!window.appData.semester) window.appData.semester = {};
   window.appData.semester.name = document.getElementById('s-sem-name').value || 'Semester';
-  window.appData.semester.start = document.getElementById('s-sem-start').value;
-  window.appData.semester.end = document.getElementById('s-sem-end').value;
+  window.appData.semester.start = start;
+  window.appData.semester.end = end;
   window.appData.semester.examStart = document.getElementById('s-exam-start').value;
   window.appData.semester.examEnd = document.getElementById('s-exam-end').value;
   await saveData('semester', window.appData.semester);
   window.closeSetup();
   renderMain();
-  if (window.appData.semester.start) {
-    const d = new Date(window.appData.semester.start);
-    calMonth = d.getMonth(); calYear = d.getFullYear();
-  }
+  const d = new Date(start);
+  calMonth = d.getMonth(); calYear = d.getFullYear();
   renderCalendar();
   showToast('Semester saved!', 'success');
 };
 
 // ─── BTECH SETUP ───────────────────────────────────────
 window.saveBTech = async () => {
+  const start = document.getElementById('bt-start').value;
+  const end = document.getElementById('bt-end').value;
+  if (start && end && new Date(end) <= new Date(start)) {
+    showToast('End date must be after start date', 'error');
+    return;
+  }
   const b = {
     degree: document.getElementById('bt-degree').value,
     college: document.getElementById('bt-college').value,
-    start: document.getElementById('bt-start').value,
-    end: document.getElementById('bt-end').value,
+    start,
+    end,
   };
   await saveData('btechInfo', b);
   renderBTechBanner();
@@ -1746,11 +1790,12 @@ function renderTrackingPage() {
 
 window.setTrackingName = async () => {
   const name = document.getElementById('tracking-name').value.trim();
-  if (!name) return;
+  if (!name) { showToast('Please enter an activity name', 'error'); return; }
   await saveData('trackingName', name);
-  document.getElementById('tracking-name-display').style.display = 'inline-flex';
-  document.getElementById('tracking-name-display').textContent = `Tracking: ${name}`;
-  showToast('Tracking name set!', 'success');
+  const display = document.getElementById('tracking-name-display');
+  display.style.display = 'inline-flex';
+  display.textContent = `Tracking: ${name}`;
+  showToast(`Now tracking: ${name}`, 'success');
 };
 
 function renderTrackGrid() {
@@ -1764,7 +1809,7 @@ function renderTrackGrid() {
   for(let i=0;i<fd;i++) cells.push('<div></div>');
   for(let d=1;d<=dim;d++) {
     const dateObj = new Date(trackYear, trackMonth, d);
-    const ds = dateObj.toISOString().slice(0,10);
+    const ds = `${trackYear}-${String(trackMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const log = window.appData.trackingLog[ds];
     const isToday = dateObj.getTime() === today.getTime();
     let inner = '<span style="color:var(--text3);font-size:0.65rem">—</span>';
@@ -1783,6 +1828,9 @@ function renderTrackGrid() {
   document.getElementById('track-month-without').textContent = mWithout;
 }
 
+// Expose renderTrackingPage globally - must be after function definition
+window.renderTrackingPage = renderTrackingPage;
+
 window.openTrackLog = (ds) => {
   document.getElementById('log-date').value = ds;
   const log = window.appData.trackingLog[ds];
@@ -1799,7 +1847,7 @@ window.openTrackLog = (ds) => {
 
 window.saveTrackLog = async () => {
   const date = document.getElementById('log-date').value;
-  const count = parseInt(document.getElementById('log-count').value)||0;
+  const count = Math.max(0, parseInt(document.getElementById('log-count').value)||0);
   const withIt = document.getElementById('log-with-it').value;
   const note = document.getElementById('log-note').value.trim();
   if (!date) return;
@@ -1833,16 +1881,21 @@ function renderDiaryGrid() {
   for(let i=0;i<fd;i++) cells.push('<div></div>');
   for(let d=1;d<=dim;d++) {
     const dateObj = new Date(diaryYear, diaryMonth, d);
-    const ds = dateObj.toISOString().slice(0,10);
+    const ds = `${diaryYear}-${String(diaryMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const entry = window.appData.diaryEntries[ds];
     const isToday = dateObj.getTime() === today.getTime();
     const isSel = ds === diarySelectedDate;
     let pctHtml = '', pctColor = 'var(--text3)';
     if (entry) {
+      const hasContent = (entry.journal && entry.journal.trim().length > 0) ||
+        (entry.expenses && entry.expenses.some(x => x.amt)) ||
+        (entry.milestones && Object.values(entry.milestones).some(v => v === true || (v && parseFloat(v) > 0)));
       const sc = calcScore(entry);
       pctColor = sc>=70 ? 'var(--accent3)' : sc>=40 ? 'var(--accent2)' : 'var(--accent)';
       const mood = entry.mood !== undefined ? MOODS[entry.mood] : '';
-      pctHtml = `<div class="d-pct" style="color:${pctColor}">${sc}%${mood}</div>`;
+      pctHtml = hasContent
+        ? `<div class="d-pct" style="color:${pctColor}">${sc}%${mood}</div>`
+        : `<div class="d-pct" style="color:var(--text3)">·</div>`;
     } else if (isToday) {
       pctHtml = '<div class="d-pct" style="color:var(--text3)">·</div>';
     }
@@ -1934,16 +1987,19 @@ function renderDiaryExpenses(entry) {
   updateExpenseTotal();
 }
 
-window.addExpenseRow = () => {
+window.addExpenseRow = async () => {
   if (!diarySelectedDate) return;
   if (!window.appData.diaryEntries[diarySelectedDate]) window.appData.diaryEntries[diarySelectedDate] = {milestones:{},expenses:[],journal:'',mood:2};
   window.appData.diaryEntries[diarySelectedDate].expenses.push({desc:'',amt:''});
+  await saveData('diaryEntries', window.appData.diaryEntries);
   renderDiaryExpenses(window.appData.diaryEntries[diarySelectedDate]);
 };
-window.updateExpense = (idx, field, val) => {
+window.updateExpense = async (idx, field, val) => {
   if (!diarySelectedDate||!window.appData.diaryEntries[diarySelectedDate]) return;
   window.appData.diaryEntries[diarySelectedDate].expenses[idx][field] = val;
   updateExpenseTotal();
+  // Auto-save so expense data isn't lost on refresh
+  await saveData('diaryEntries', window.appData.diaryEntries);
 };
 window.removeExpense = async (idx) => {
   if (!diarySelectedDate||!window.appData.diaryEntries[diarySelectedDate]) return;
@@ -2013,8 +2069,15 @@ function renderInsights() {
   const today = new Date(); today.setHours(0,0,0,0);
   let check = new Date(today);
   while (true) {
-    const ds = check.toISOString().slice(0,10);
-    if (entries[ds]) { streak++; check.setDate(check.getDate()-1); }
+    const ds = `${check.getFullYear()}-${String(check.getMonth()+1).padStart(2,'0')}-${String(check.getDate()).padStart(2,'0')}`;
+    const e = entries[ds];
+    // Only count as a real entry if it has journal text, milestones checked, or expenses
+    const hasContent = e && (
+      (e.journal && e.journal.trim().length > 0) ||
+      (e.expenses && e.expenses.some(x => x.amt)) ||
+      (e.milestones && Object.values(e.milestones).some(v => v === true || (v && parseFloat(v) > 0)))
+    );
+    if (hasContent) { streak++; check.setDate(check.getDate()-1); }
     else break;
   }
   document.getElementById('ins-streak').textContent = streak + ' day' + (streak!==1?'s':'');
@@ -2046,17 +2109,17 @@ function renderInsights() {
   bars.innerHTML = '';
   for (let i=29;i>=0;i--) {
     const d = new Date(today); d.setDate(d.getDate()-i);
-    const ds = d.toISOString().slice(0,10);
+    const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     const sc = entries[ds] ? calcScore(entries[ds]) : 0;
     const color = sc>=70?'var(--accent3)':sc>=40?'var(--accent2)':'var(--border2)';
-    bars.innerHTML += `<div style="flex:1;background:${color};height:${Math.max(4,sc)}%;border-radius:2px 2px 0 0;transition:height 0.3s" title="${ds}: ${sc}%"></div>`;
+    bars.innerHTML += `<div style="flex:1;background:${color};height:${Math.max(3, Math.round(sc * 0.76))}px;border-radius:2px 2px 0 0;transition:height 0.3s;align-self:flex-end" title="${ds}: ${sc}%"></div>`;
   }
 
   // Mood chart
   const moodCounts = [0,0,0,0,0,0];
   for (let i=0;i<30;i++) {
     const d = new Date(today); d.setDate(d.getDate()-i);
-    const ds = d.toISOString().slice(0,10);
+    const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     if (entries[ds] && entries[ds].mood !== undefined) moodCounts[entries[ds].mood]++;
   }
   const moodEl = document.getElementById('ins-mood-chart');
@@ -2094,14 +2157,40 @@ window.showPage = (p) => {
 
 window.toggleUserMenu = () => {
   const m = document.getElementById('user-menu');
-  m.style.display = m.style.display === 'none' ? 'block' : 'none';
+  const isHidden = m.style.display === 'none' || m.style.display === '';
+  if (isHidden) {
+    // On mobile (small screen) — position above bottom nav
+    if (window.innerWidth <= 768) {
+      m.style.top = 'auto';
+      m.style.bottom = '70px';
+      m.style.right = '1rem';
+      m.style.left = 'auto';
+      m.style.width = 'calc(100vw - 2rem)';
+      m.style.borderRadius = '14px';
+    } else {
+      // Desktop — position below top nav avatar
+      m.style.top = '60px';
+      m.style.bottom = 'auto';
+      m.style.right = '1.5rem';
+      m.style.width = 'auto';
+    }
+    m.style.display = 'block';
+  } else {
+    m.style.display = 'none';
+  }
 };
 
 // Close user menu on outside click
 document.addEventListener('click', (e) => {
   const menu = document.getElementById('user-menu');
   const avatar = document.getElementById('nav-avatar');
-  if (!menu.contains(e.target) && e.target !== avatar) menu.style.display='none';
+  const mobAccount = document.getElementById('mob-btn-account');
+  const clickedOutside = !menu.contains(e.target)
+    && e.target !== avatar
+    && !avatar.contains(e.target)
+    && e.target !== mobAccount
+    && !mobAccount.contains(e.target);
+  if (clickedOutside) menu.style.display = 'none';
 });
 
 // ─── AUTH TAB SWITCH ───────────────────────────────────
