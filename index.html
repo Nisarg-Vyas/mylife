@@ -618,6 +618,86 @@ body.printing #print-container { display: block !important; }
   .pr-empty { color: #aaa; font-style: italic; font-size: 0.88rem; text-align: center; padding: 1rem; }
   .pr-divider { border: none; border-top: 1px solid #eee; margin: 0.75rem 0; }
 }
+
+/* ── Goals feature ── */
+.goal-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: var(--radius2);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  transition: opacity 0.2s;
+  min-height: 40px;
+}
+.goal-item.done {
+  opacity: 0.5;
+  background: var(--surface);
+}
+.goal-item.done .goal-text {
+  text-decoration: line-through;
+  color: var(--text3);
+}
+.goal-cb {
+  width: 17px; height: 17px; flex-shrink: 0;
+  accent-color: var(--accent3);
+  cursor: pointer;
+}
+.goal-text {
+  flex: 1;
+  font-size: 0.875rem;
+  color: var(--text);
+  line-height: 1.4;
+  word-break: break-word;
+  cursor: text;
+  outline: none;
+  background: transparent;
+  border: none;
+  font-family: 'Outfit', sans-serif;
+  padding: 0;
+  resize: none;
+  min-height: 20px;
+}
+.goal-text:focus {
+  color: var(--text);
+  background: var(--surface3);
+  border-radius: 4px;
+  padding: 0 4px;
+}
+.goal-actions {
+  display: flex;
+  gap: 0.2rem;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.goal-item:hover .goal-actions,
+.goal-item:focus-within .goal-actions {
+  opacity: 1;
+}
+.goal-act-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text3);
+  font-size: 0.8rem;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: all 0.15s;
+  line-height: 1;
+}
+.goal-act-btn:hover { background: var(--surface3); color: var(--text); }
+.goal-divider {
+  text-align: center;
+  font-size: 0.65rem;
+  color: var(--text3);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.4rem 0 0.15rem;
+  border-top: 1px solid var(--border);
+  margin-top: 0.2rem;
+}
 </style>
 </head>
 <body>
@@ -781,6 +861,30 @@ body.printing #print-container { display: block !important; }
         <div class="stat-card"><div class="stat-num text-green" id="stat-vacation-days">—</div><div class="stat-label">Vacation Days</div></div>
         <div class="stat-card"><div class="stat-num text-yellow" id="stat-exam-days">—</div><div class="stat-label">Exam Days Left</div></div>
         <div class="stat-card"><div class="stat-num" id="stat-sem-pct" style="color:var(--accent4)">—</div><div class="stat-label">Sem Completed</div></div>
+      </div>
+
+      <!-- ── Goals Box ── -->
+      <div class="card" style="margin-bottom:1rem" id="goals-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.85rem;gap:0.5rem;flex-wrap:wrap">
+          <div class="card-title" style="margin-bottom:0">🎯 Goals</div>
+          <div style="display:flex;gap:0.5rem;align-items:center">
+            <span id="goals-count" style="font-size:0.75rem;color:var(--text3)"></span>
+            <button class="btn btn-primary btn-sm" onclick="window.openAddGoal()">+ Add Goal</button>
+          </div>
+        </div>
+        <!-- Add-goal inline form (hidden by default) -->
+        <div id="goal-add-form" style="display:none;margin-bottom:0.85rem;display:none">
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+            <input type="text" class="input" id="goal-input" placeholder="Enter your goal…" style="flex:1;min-width:160px"
+              onkeyup="if(event.key==='Enter')window.submitGoal()">
+            <button class="btn btn-primary btn-sm" onclick="window.submitGoal()">Add</button>
+            <button class="btn btn-secondary btn-sm" onclick="window.cancelAddGoal()">✕</button>
+          </div>
+        </div>
+        <!-- Scrollable goal list -->
+        <div id="goals-list" style="max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:0.3rem">
+          <p class="text-xs text-muted" style="text-align:center;padding:1rem 0">No goals yet — add one above</p>
+        </div>
       </div>
 
       <div class="grid-2" style="margin-bottom:1rem">
@@ -1290,6 +1394,7 @@ window.appData = {
   milestones: [],
   diaryEntries: {},
   btechInfo: null,
+  goals: [],
 };
 
 async function saveData(key, value) {
@@ -1328,7 +1433,7 @@ async function loadData(key) {
 }
 
 async function loadAllData() {
-  const keys = ['semester','customEvents','trackingName','trackingLog','milestones','diaryEntries','btechInfo'];
+  const keys = ['semester','customEvents','trackingName','trackingLog','milestones','diaryEntries','btechInfo','goals'];
   for (const k of keys) {
     const val = await loadData(k);
     if (val !== null) window.appData[k] = val;
@@ -1751,6 +1856,173 @@ ${bodyHtml}
   setTimeout(() => { try { win.focus(); win.print(); } catch(e){} }, 800);
 }
 
+
+// ════════════════════════════════════════════════════════
+// GOALS FEATURE
+// Data: window.appData.goals = [
+//   { id, text, done, order }
+// ]
+// Incomplete goals shown first (sorted by order),
+// then completed goals (sorted by order).
+// ════════════════════════════════════════════════════════
+
+async function saveGoals() {
+  await saveData('goals', window.appData.goals);
+}
+
+function renderGoals() {
+  const goals = window.appData.goals || [];
+  const list  = document.getElementById('goals-list');
+  const countEl = document.getElementById('goals-count');
+  if (!list) return;
+
+  if (!goals.length) {
+    list.innerHTML = '<p class="text-xs text-muted" style="text-align:center;padding:1rem 0">No goals yet — add one above</p>';
+    if (countEl) countEl.textContent = '';
+    return;
+  }
+
+  // Split into two groups, preserve internal order
+  const incomplete = goals.filter(g => !g.done);
+  const complete   = goals.filter(g =>  g.done);
+
+  if (countEl) {
+    countEl.textContent = `${incomplete.length} remaining · ${complete.length} done`;
+  }
+
+  let html = '';
+
+  // Incomplete goals
+  incomplete.forEach((g, localIdx) => {
+    const globalIdx = goals.indexOf(g);
+    html += renderGoalRow(g, globalIdx, localIdx, incomplete.length, 'incomplete');
+  });
+
+  // Divider between sections
+  if (incomplete.length && complete.length) {
+    html += `<div class="goal-divider">✓ Completed</div>`;
+  }
+
+  // Completed goals
+  complete.forEach((g, localIdx) => {
+    const globalIdx = goals.indexOf(g);
+    html += renderGoalRow(g, globalIdx, localIdx, complete.length, 'complete');
+  });
+
+  list.innerHTML = html;
+}
+
+function renderGoalRow(g, globalIdx, localIdx, groupLen, group) {
+  const isFirst = localIdx === 0;
+  const isLast  = localIdx === groupLen - 1;
+  const escText = g.text.replace(/"/g, '&quot;').replace(/</g, '&lt;');
+
+  // Move-up: go to top of its group. Move-down: go to bottom of its group.
+  const upBtn   = !isFirst
+    ? `<button class="goal-act-btn" title="Move to top of group"    onclick="window.goalMoveTop(${globalIdx})">⬆</button>`
+    : `<button class="goal-act-btn" style="visibility:hidden">⬆</button>`;
+  const downBtn = !isLast
+    ? `<button class="goal-act-btn" title="Move to bottom of group" onclick="window.goalMoveBottom(${globalIdx})">⬇</button>`
+    : `<button class="goal-act-btn" style="visibility:hidden">⬇</button>`;
+
+  return `<div class="goal-item ${g.done ? 'done' : ''}" id="goal-row-${g.id}">
+    <input type="checkbox" class="goal-cb" ${g.done ? 'checked' : ''}
+      onchange="window.goalToggle(${globalIdx}, this.checked)">
+    <span class="goal-text" contenteditable="true" spellcheck="false"
+      onblur="window.goalEdit(${globalIdx}, this.innerText)"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"
+    >${escText}</span>
+    <div class="goal-actions">
+      ${upBtn}
+      ${downBtn}
+      <button class="goal-act-btn" title="Delete" onclick="window.goalDelete(${globalIdx})" style="color:var(--accent)">✕</button>
+    </div>
+  </div>`;
+}
+
+// ── Add goal form ──
+window.openAddGoal = () => {
+  const form = document.getElementById('goal-add-form');
+  form.style.display = 'flex';
+  form.style.flexDirection = 'column';
+  document.getElementById('goal-input').focus();
+};
+
+window.cancelAddGoal = () => {
+  document.getElementById('goal-add-form').style.display = 'none';
+  document.getElementById('goal-input').value = '';
+};
+
+window.submitGoal = async () => {
+  const input = document.getElementById('goal-input');
+  const text  = input.value.trim();
+  if (!text) { showToast('Enter a goal first', 'error'); return; }
+  if (!window.appData.goals) window.appData.goals = [];
+  window.appData.goals.push({ id: 'g_' + Date.now(), text, done: false });
+  input.value = '';
+  document.getElementById('goal-add-form').style.display = 'none';
+  await saveGoals();
+  renderGoals();
+  showToast('Goal added!', 'success');
+};
+
+// ── Toggle complete ──
+window.goalToggle = async (idx, done) => {
+  if (!window.appData.goals[idx]) return;
+  window.appData.goals[idx].done = done;
+  await saveGoals();
+  renderGoals();
+};
+
+// ── Inline edit ──
+window.goalEdit = async (idx, newText) => {
+  const text = newText.trim();
+  if (!text || !window.appData.goals[idx]) return;
+  if (window.appData.goals[idx].text === text) return; // no change
+  window.appData.goals[idx].text = text;
+  await saveGoals();
+  // Re-render to sync (contenteditable doesn't need full re-render but keeps state clean)
+  renderGoals();
+};
+
+// ── Move to top of its group ──
+window.goalMoveTop = async (idx) => {
+  const goals = window.appData.goals;
+  const g = goals[idx];
+  if (!g) return;
+  // Find the first item in the same group
+  const firstInGroup = goals.findIndex(x => x.done === g.done);
+  if (firstInGroup === idx) return; // already at top
+  goals.splice(idx, 1);            // remove from current position
+  goals.splice(firstInGroup, 0, g); // insert at top of group
+  await saveGoals();
+  renderGoals();
+};
+
+// ── Move to bottom of its group ──
+window.goalMoveBottom = async (idx) => {
+  const goals = window.appData.goals;
+  const g = goals[idx];
+  if (!g) return;
+  // Find last item in same group
+  let lastInGroup = -1;
+  goals.forEach((x, i) => { if (x.done === g.done) lastInGroup = i; });
+  if (lastInGroup === idx) return; // already at bottom
+  goals.splice(idx, 1);
+  // After removal, lastInGroup index might shift by -1 if idx < lastInGroup
+  const insertAt = idx < lastInGroup ? lastInGroup : lastInGroup + 1;
+  goals.splice(insertAt, 0, g);
+  await saveGoals();
+  renderGoals();
+};
+
+// ── Delete ──
+window.goalDelete = async (idx) => {
+  window.appData.goals.splice(idx, 1);
+  await saveGoals();
+  renderGoals();
+};
+
 // Expose save/load to global scope
 window.saveData = saveData;
 window.loadData = loadData;
@@ -1960,6 +2232,7 @@ function renderMain() {
   if (!window.appData.semester) {
     document.getElementById('setup-prompt').style.display = 'block';
     document.getElementById('main-content').style.display = 'none';
+    renderGoals();  // Goals visible even without semester setup
     return;
   }
   document.getElementById('setup-prompt').style.display = 'none';
@@ -2801,7 +3074,7 @@ window.showPage = (p) => {
   if (p==='tracking') renderTrackingPage();
   if (p==='diary') renderDiaryGrid();
   if (p==='insights') { renderInsights(); initExportDates(); }
-  if (p==='main') renderMain();
+  if (p==='main') { renderMain(); renderGoals(); }
   if (p==='btech-setup') renderBTechSetupPreview();
 };
 
